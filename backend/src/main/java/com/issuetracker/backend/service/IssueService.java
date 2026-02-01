@@ -40,6 +40,9 @@ public class IssueService {
     @Autowired
     private ActivityLogRepository activityLogRepository;
 
+    @Autowired
+    private SseService sseService;
+
     @Transactional
     public IssueDTO createIssue(CreateIssueRequest request) {
         User currentUser = getCurrentUser();
@@ -75,7 +78,12 @@ public class IssueService {
         logActivity(savedIssue, currentUser, "Issue created", 
             "Created with status: " + savedIssue.getStatus() + ", priority: " + savedIssue.getPriority());
 
-        return convertToDTO(savedIssue);
+        IssueDTO issueDTO = convertToDTO(savedIssue);
+        
+        // Broadcast SSE event
+        sseService.broadcastIssueUpdate(issueDTO, "issue-created");
+
+        return issueDTO;
     }
 
     public Page<IssueDTO> getIssues(
@@ -191,7 +199,14 @@ public class IssueService {
             logActivity(updatedIssue, currentUser, "Issue updated", activityDetails.toString().trim());
         }
 
-        return convertToDTO(updatedIssue);
+        IssueDTO issueDTO = convertToDTO(updatedIssue);
+        
+        // Broadcast SSE event if there were changes
+        if (activityDetails.length() > 0) {
+            sseService.broadcastIssueUpdate(issueDTO, "issue-updated");
+        }
+
+        return issueDTO;
     }
 
     @Transactional
@@ -224,6 +239,10 @@ public class IssueService {
             "Comment: " + (request.getContent().length() > 50 
                 ? request.getContent().substring(0, 50) + "..." 
                 : request.getContent()));
+
+        // Broadcast SSE event for issue update (comment count changed)
+        IssueDTO issueDTO = convertToDTO(issue);
+        sseService.broadcastIssueUpdate(issueDTO, "issue-commented");
 
         return convertCommentToDTO(savedComment);
     }
