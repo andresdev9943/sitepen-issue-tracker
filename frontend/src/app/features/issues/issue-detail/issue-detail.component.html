@@ -191,11 +191,11 @@
           <div *ngIf="!loadingComments && comments.length > 0" class="comments-list">
             <div *ngFor="let comment of comments" class="comment-item">
               <div class="comment-avatar">
-                {{ comment.author.fullName[0].toUpperCase() }}
+                {{ comment.user.fullName[0].toUpperCase() }}
               </div>
               <div class="comment-content">
                 <div class="comment-header">
-                  <span class="comment-author">{{ comment.author.fullName }}</span>
+                  <span class="comment-author">{{ comment.user.fullName }}</span>
                   <span class="comment-date">{{ comment.createdAt | date: 'MMM d, y h:mm a' }}</span>
                   <div class="comment-actions" *ngIf="canEditComment(comment)">
                     <button (click)="startEditComment(comment)" class="btn-icon" title="Edit comment">

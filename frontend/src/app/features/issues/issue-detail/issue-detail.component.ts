@@ -330,7 +330,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
   canEditComment(comment: Comment): boolean {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) return false;
-    return comment.author.id === currentUser.id;
+    return comment.user.id === currentUser.id;
   }
 
   startEditComment(comment: Comment): void {

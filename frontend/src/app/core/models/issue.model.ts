@@ -36,10 +36,13 @@ export interface UpdateIssueRequest {
 export interface Comment {
   id: number;
   issueId: number;
-  author: User;  // Changed from user to author to match backend
+  user: User;  // Backend sends 'user', not 'author'
   content: string;
   createdAt: string;
 }
+
+// Alias for template compatibility
+export type CommentAuthor = User;
 
 export interface CreateCommentRequest {
   content: string;
