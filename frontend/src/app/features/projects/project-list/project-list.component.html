@@ -1,4 +1,5 @@
 <div class="projects-container">
+  <!-- Navbar -->
   <nav class="navbar">
     <div class="nav-content">
       <h1>Issue Tracker</h1>
@@ -9,19 +10,84 @@
     </div>
   </nav>
 
+  <!-- Main Content -->
   <div class="content">
-    <h2>Welcome to Issue Tracker!</h2>
-    <p>Authentication is working. Projects feature coming next...</p>
-    <div class="info-box">
-      <h3>Current Status:</h3>
-      <ul>
-        <li>✅ Authentication (Login/Register)</li>
-        <li>✅ JWT Token Management</li>
-        <li>✅ Protected Routes</li>
-        <li>⏳ Projects Module (Next)</li>
-        <li>⏳ Issues Module</li>
-        <li>⏳ Real-time Updates (SSE)</li>
-      </ul>
+    <!-- Header -->
+    <div class="content-header">
+      <div>
+        <h2>Projects</h2>
+        <p class="subtitle">Manage your projects and collaborate with your team</p>
+      </div>
+      <button (click)="createProject()" class="btn-primary">
+        <span class="icon">+</span>
+        New Project
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading projects...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+      <span class="error-icon">⚠️</span>
+      <p>{{ error }}</p>
+      <button (click)="loadProjects()" class="btn-retry">Try Again</button>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && !error && projects.length === 0" class="empty-state">
+      <div class="empty-icon">📁</div>
+      <h3>No projects yet</h3>
+      <p>Create your first project to get started tracking issues</p>
+      <button (click)="createProject()" class="btn-primary">
+        <span class="icon">+</span>
+        Create Project
+      </button>
+    </div>
+
+    <!-- Projects Grid -->
+    <div *ngIf="!loading && !error && projects.length > 0" class="projects-grid">
+      <div 
+        *ngFor="let project of projects" 
+        class="project-card"
+        (click)="viewProject(project.id)"
+      >
+        <div class="project-header">
+          <h3>{{ project.name }}</h3>
+          <span class="owner-badge" *ngIf="isOwner(project)">Owner</span>
+        </div>
+        
+        <p class="project-description" *ngIf="project.description">
+          {{ project.description }}
+        </p>
+        <p class="project-description empty" *ngIf="!project.description">
+          No description provided
+        </p>
+
+        <div class="project-stats">
+          <div class="stat">
+            <span class="stat-icon">📋</span>
+            <span class="stat-value">{{ project.issueCount }}</span>
+            <span class="stat-label">Issues</span>
+          </div>
+          <div class="stat">
+            <span class="stat-icon">👥</span>
+            <span class="stat-value">{{ project.members.length + 1 }}</span>
+            <span class="stat-label">Members</span>
+          </div>
+        </div>
+
+        <div class="project-footer">
+          <div class="owner-info">
+            <span class="owner-label">Owner:</span>
+            <span class="owner-name">{{ project.owner.fullName }}</span>
+          </div>
+          <span class="view-link">View →</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>

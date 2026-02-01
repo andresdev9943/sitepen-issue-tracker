@@ -1,27 +1,31 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { Observable } from 'rxjs';
-import { User } from '../../../core/models/user.model';
+import { ProjectService } from '../../../core/services/project.service';
+import { Project } from '../../../core/models/project.model';
 
 @Component({
   selector: 'app-project-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './project-list.component.html',
   styleUrls: ['./project-list.component.scss']
 })
 export class ProjectListComponent implements OnInit {
-  currentUser$!: Observable<User | null>;
+  projects: Project[] = [];
+  loading = true;
+  error = '';
+  currentUser$ = this.authService.currentUser$;
 
   constructor(
     private authService: AuthService,
+    private projectService: ProjectService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.currentUser$ = this.authService.currentUser$;
+    this.loadProjects();
     
     // Load current user if not already loaded
     if (!this.authService.getCurrentUser()) {
@@ -29,8 +33,38 @@ export class ProjectListComponent implements OnInit {
     }
   }
 
+  loadProjects(): void {
+    this.loading = true;
+    this.error = '';
+    
+    this.projectService.getProjects().subscribe({
+      next: (projects) => {
+        this.projects = projects;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.error = 'Failed to load projects';
+        this.loading = false;
+        console.error('Error loading projects:', error);
+      }
+    });
+  }
+
+  viewProject(id: number): void {
+    this.router.navigate(['/projects', id]);
+  }
+
+  createProject(): void {
+    this.router.navigate(['/projects/new']);
+  }
+
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  isOwner(project: Project): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    return currentUser ? project.owner.id === currentUser.id : false;
   }
 }

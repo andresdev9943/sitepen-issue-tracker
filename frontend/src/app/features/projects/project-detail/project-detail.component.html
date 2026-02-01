@@ -1,0 +1,178 @@
+<div class="detail-container">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <h1 [routerLink]="['/projects']">Issue Tracker</h1>
+      <div class="nav-right" *ngIf="currentUser$ | async as user">
+        <span class="user-name">{{ user.fullName }}</span>
+        <button (click)="logout()" class="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading project...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+      <span class="error-icon">⚠️</span>
+      <p>{{ error }}</p>
+      <button (click)="backToProjects()" class="btn-primary">Back to Projects</button>
+    </div>
+
+    <!-- Project Detail -->
+    <div *ngIf="!loading && !error && project" class="project-detail">
+      <!-- Header -->
+      <div class="detail-header">
+        <button (click)="backToProjects()" class="btn-back">← Back</button>
+        <div class="header-actions" *ngIf="isOwner()">
+          <button (click)="editProject()" class="btn-edit">✏️ Edit</button>
+          <button (click)="confirmDelete()" class="btn-delete">🗑️ Delete</button>
+        </div>
+      </div>
+
+      <!-- Project Info Card -->
+      <div class="info-card">
+        <div class="card-header">
+          <div>
+            <h2>{{ project.name }}</h2>
+            <span class="owner-badge" *ngIf="isOwner()">Owner</span>
+          </div>
+        </div>
+
+        <p class="description" *ngIf="project.description">{{ project.description }}</p>
+        <p class="description empty" *ngIf="!project.description">No description provided</p>
+
+        <div class="project-stats">
+          <div class="stat-card">
+            <span class="stat-icon">📋</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ project.issueCount }}</span>
+              <span class="stat-label">Issues</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">👥</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ members.length + 1 }}</span>
+              <span class="stat-label">Members</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="owner-section">
+          <span class="section-label">Project Owner</span>
+          <div class="owner-info">
+            <span class="owner-name">{{ project.owner.fullName }}</span>
+            <span class="owner-email">{{ project.owner.email }}</span>
+          </div>
+        </div>
+
+        <button (click)="viewIssues()" class="btn-view-issues">
+          View Issues →
+        </button>
+      </div>
+
+      <!-- Members Card -->
+      <div class="members-card">
+        <div class="card-header">
+          <h3>Team Members</h3>
+          <button 
+            *ngIf="isOwner()" 
+            (click)="toggleAddMemberForm()" 
+            class="btn-add-member"
+          >
+            + Add Member
+          </button>
+        </div>
+
+        <!-- Add Member Form -->
+        <div *ngIf="showAddMemberForm" class="add-member-form">
+          <form [formGroup]="addMemberForm" (ngSubmit)="addMember()">
+            <div class="form-error" *ngIf="addMemberError">
+              {{ addMemberError }}
+            </div>
+            <div class="form-inline">
+              <input
+                type="email"
+                formControlName="email"
+                placeholder="Enter user email"
+                class="form-control"
+              />
+              <button 
+                type="submit" 
+                class="btn-submit"
+                [disabled]="addMemberForm.invalid || addingMember"
+              >
+                {{ addingMember ? 'Adding...' : 'Add' }}
+              </button>
+              <button 
+                type="button" 
+                (click)="toggleAddMemberForm()" 
+                class="btn-cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Owner -->
+        <div class="member-item owner-item">
+          <div class="member-avatar">{{ project.owner.fullName[0].toUpperCase() }}</div>
+          <div class="member-info">
+            <span class="member-name">{{ project.owner.fullName }}</span>
+            <span class="member-email">{{ project.owner.email }}</span>
+          </div>
+          <span class="member-role owner">Owner</span>
+        </div>
+
+        <!-- Members List -->
+        <div *ngIf="members.length === 0" class="empty-members">
+          <p>No team members yet</p>
+          <span *ngIf="isOwner()">Click "Add Member" to invite team members</span>
+        </div>
+
+        <div *ngFor="let member of members" class="member-item">
+          <div class="member-avatar">{{ member.user.fullName[0].toUpperCase() }}</div>
+          <div class="member-info">
+            <span class="member-name">{{ member.user.fullName }}</span>
+            <span class="member-email">{{ member.user.email }}</span>
+          </div>
+          <div class="member-actions">
+            <span class="member-role">{{ member.role }}</span>
+            <button 
+              *ngIf="isOwner()" 
+              (click)="removeMember(member)" 
+              class="btn-remove"
+              title="Remove member"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div *ngIf="showDeleteConfirm" class="modal-overlay" (click)="cancelDelete()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Delete Project?</h3>
+      <p>Are you sure you want to delete this project? This action cannot be undone and will delete all associated issues and comments.</p>
+      <div class="modal-actions">
+        <button (click)="cancelDelete()" class="btn-secondary" [disabled]="deleting">
+          Cancel
+        </button>
+        <button (click)="deleteProject()" class="btn-danger" [disabled]="deleting">
+          {{ deleting ? 'Deleting...' : 'Delete Project' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

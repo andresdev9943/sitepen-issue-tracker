@@ -1,0 +1,80 @@
+<div class="form-container">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <h1 [routerLink]="['/projects']">Issue Tracker</h1>
+      <div class="nav-right" *ngIf="currentUser$ | async as user">
+        <span class="user-name">{{ user.fullName }}</span>
+        <button (click)="logout()" class="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Form Content -->
+  <div class="content">
+    <div class="form-card">
+      <div class="form-header">
+        <h2>{{ isEditMode ? 'Edit Project' : 'Create New Project' }}</h2>
+        <p>{{ isEditMode ? 'Update your project details' : 'Set up a new project to start tracking issues' }}</p>
+      </div>
+
+      <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" class="project-form">
+        <!-- Error Message -->
+        <div class="error-message" *ngIf="error">
+          <span class="error-icon">⚠️</span>
+          {{ error }}
+        </div>
+
+        <!-- Project Name -->
+        <div class="form-group">
+          <label for="name">Project Name <span class="required">*</span></label>
+          <input
+            type="text"
+            id="name"
+            formControlName="name"
+            class="form-control"
+            [class.error]="f['name'].invalid && f['name'].touched"
+            placeholder="My Awesome Project"
+          />
+          <div class="field-error" *ngIf="f['name'].invalid && f['name'].touched">
+            <span *ngIf="f['name'].errors?.['required']">Project name is required</span>
+            <span *ngIf="f['name'].errors?.['minlength']">Name must be at least 3 characters</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            formControlName="description"
+            class="form-control textarea"
+            rows="4"
+            placeholder="Describe your project..."
+          ></textarea>
+          <span class="field-hint">Optional: Add a brief description of what this project is about</span>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button
+            type="button"
+            (click)="cancel()"
+            class="btn-secondary"
+            [disabled]="loading"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="projectForm.invalid || loading"
+          >
+            <span *ngIf="!loading">{{ isEditMode ? 'Update Project' : 'Create Project' }}</span>
+            <span *ngIf="loading">{{ isEditMode ? 'Updating...' : 'Creating...' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
