@@ -2,8 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { Observable } from 'rxjs';
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { User } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-project-form',
@@ -18,7 +20,7 @@ export class ProjectFormComponent implements OnInit {
   error = '';
   isEditMode = false;
   projectId?: number;
-  currentUser$ = this.authService.currentUser$;
+  currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
 
   constructor(
     private fb: FormBuilder,
@@ -34,6 +36,9 @@ export class ProjectFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Initialize currentUser$ observable
+    this.currentUser$ = this.authService.currentUser$;
+    
     // Check if we're in edit mode
     const id = this.route.snapshot.params['id'];
     if (id && id !== 'new') {

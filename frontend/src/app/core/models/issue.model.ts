@@ -10,7 +10,8 @@ export interface Issue {
   status: IssueStatus;
   priority: IssuePriority;
   assignee: User | null;
-  createdBy: User;
+  reporter: User;  // Changed from createdBy to reporter
+  projectOwnerId: number;  // Added for permission checks
   createdAt: string;
   updatedAt: string;
   commentCount: number;
@@ -35,7 +36,7 @@ export interface UpdateIssueRequest {
 export interface Comment {
   id: number;
   issueId: number;
-  user: User;
+  author: User;  // Changed from user to author to match backend
   content: string;
   createdAt: string;
 }
@@ -49,8 +50,8 @@ export interface ActivityLog {
   issueId: number;
   user: User;
   action: string;
-  details: string;
-  createdAt: string;
+  changes: string;  // Changed from details to changes to match backend
+  timestamp: string;  // Changed from createdAt to timestamp to match backend
 }
 
 export interface PageResponse<T> {
@@ -59,6 +60,7 @@ export interface PageResponse<T> {
     pageNumber: number;
     pageSize: number;
   };
+  number: number;  // Added: current page number
   totalElements: number;
   totalPages: number;
   last: boolean;

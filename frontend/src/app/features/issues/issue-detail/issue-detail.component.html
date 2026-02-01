@@ -1,0 +1,226 @@
+<div class="detail-container">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <h1 [routerLink]="['/projects']">Issue Tracker</h1>
+      <div class="nav-right" *ngIf="currentUser$ | async as user">
+        <span class="user-name">{{ user.fullName }}</span>
+        <button (click)="logout()" class="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading issue...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+      <span class="error-icon">⚠️</span>
+      <p>{{ error }}</p>
+      <button (click)="backToIssues()" class="btn-primary">Back to Issues</button>
+    </div>
+
+    <!-- Issue Detail -->
+    <div *ngIf="!loading && !error && issue" class="issue-detail">
+      <!-- Header -->
+      <div class="detail-header">
+        <button (click)="backToIssues()" class="btn-back">← Back</button>
+        <div class="header-actions" *ngIf="canEditIssue()">
+          <button (click)="editIssue()" class="btn-edit">✏️ Edit</button>
+          <button (click)="confirmDelete()" class="btn-delete">🗑️ Delete</button>
+        </div>
+      </div>
+
+      <!-- Issue Card -->
+      <div class="issue-card">
+        <div class="issue-header">
+          <div class="title-section">
+            <div class="title-row">
+              <h2>{{ issue.title }}</h2>
+              <span class="issue-id">#{{ issue.id }}</span>
+            </div>
+            <div class="badges">
+              <span [class]="'priority-badge ' + getPriorityClass(issue.priority)">
+                {{ issue.priority }}
+              </span>
+              <span [class]="'status-badge ' + getStatusClass(issue.status)">
+                {{ getStatusLabel(issue.status) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="issue-description" *ngIf="issue.description">
+          <h3>Description</h3>
+          <p>{{ issue.description }}</p>
+        </div>
+
+        <div class="issue-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Project</span>
+            <span class="meta-value link" (click)="viewProject()">
+              📁 {{ issue.projectName }}
+            </span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Reporter</span>
+            <span class="meta-value">
+              👤 {{ issue.reporter.fullName }}
+            </span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Assignee</span>
+            <span class="meta-value" *ngIf="issue.assignee">
+              👤 {{ issue.assignee.fullName }}
+            </span>
+            <span class="meta-value empty" *ngIf="!issue.assignee">
+              Unassigned
+            </span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Created</span>
+            <span class="meta-value">
+              {{ issue.createdAt | date: 'MMM d, y h:mm a' }}
+            </span>
+          </div>
+
+          <div class="meta-item" *ngIf="issue.updatedAt !== issue.createdAt">
+            <span class="meta-label">Updated</span>
+            <span class="meta-value">
+              {{ issue.updatedAt | date: 'MMM d, y h:mm a' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button
+          (click)="switchTab('comments')"
+          [class.active]="currentTab === 'comments'"
+          class="tab-button"
+        >
+          💬 Comments ({{ comments.length }})
+        </button>
+        <button
+          (click)="switchTab('activity')"
+          [class.active]="currentTab === 'activity'"
+          class="tab-button"
+        >
+          📊 Activity ({{ activityLog.length }})
+        </button>
+      </div>
+
+      <!-- Comments Tab -->
+      <div *ngIf="currentTab === 'comments'" class="tab-content">
+        <!-- Add Comment Form -->
+        <div class="add-comment-section">
+          <h3>Add Comment</h3>
+          <div *ngIf="commentError" class="comment-error">
+            {{ commentError }}
+          </div>
+          <div class="comment-form">
+            <textarea
+              [formControl]="commentControl"
+              placeholder="Write your comment..."
+              rows="4"
+              class="comment-input"
+            ></textarea>
+            <button
+              (click)="submitComment()"
+              [disabled]="commentControl.invalid || submittingComment"
+              class="btn-submit-comment"
+            >
+              {{ submittingComment ? 'Posting...' : 'Post Comment' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Comments List -->
+        <div class="comments-section">
+          <h3>Comments</h3>
+          
+          <div *ngIf="loadingComments" class="loading-small">
+            <div class="spinner-small"></div>
+            <p>Loading comments...</p>
+          </div>
+
+          <div *ngIf="!loadingComments && comments.length === 0" class="empty-comments">
+            <p>No comments yet. Be the first to comment!</p>
+          </div>
+
+          <div *ngIf="!loadingComments && comments.length > 0" class="comments-list">
+            <div *ngFor="let comment of comments" class="comment-item">
+              <div class="comment-avatar">
+                {{ comment.author.fullName[0].toUpperCase() }}
+              </div>
+              <div class="comment-content">
+                <div class="comment-header">
+                  <span class="comment-author">{{ comment.author.fullName }}</span>
+                  <span class="comment-date">{{ comment.createdAt | date: 'MMM d, y h:mm a' }}</span>
+                </div>
+                <p class="comment-text">{{ comment.content }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Tab -->
+      <div *ngIf="currentTab === 'activity'" class="tab-content">
+        <div class="activity-section">
+          <h3>Activity Log</h3>
+          
+          <div *ngIf="loadingActivity" class="loading-small">
+            <div class="spinner-small"></div>
+            <p>Loading activity...</p>
+          </div>
+
+          <div *ngIf="!loadingActivity && activityLog.length === 0" class="empty-activity">
+            <p>No activity recorded yet.</p>
+          </div>
+
+          <div *ngIf="!loadingActivity && activityLog.length > 0" class="activity-timeline">
+            <div *ngFor="let activity of activityLog" class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-content">
+                <div class="activity-header">
+                  <span class="activity-user">{{ activity.user.fullName }}</span>
+                  <span class="activity-action">{{ activity.action }}</span>
+                </div>
+                <p class="activity-changes" *ngIf="activity.changes">
+                  {{ activity.changes }}
+                </p>
+                <span class="activity-date">{{ activity.timestamp | date: 'MMM d, y h:mm a' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div *ngIf="showDeleteConfirm" class="modal-overlay" (click)="cancelDelete()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Delete Issue?</h3>
+      <p>Are you sure you want to delete this issue? This action cannot be undone and will delete all associated comments and activity.</p>
+      <div class="modal-actions">
+        <button (click)="cancelDelete()" class="btn-secondary" [disabled]="deleting">
+          Cancel
+        </button>
+        <button (click)="deleteIssue()" class="btn-danger" [disabled]="deleting">
+          {{ deleting ? 'Deleting...' : 'Delete Issue' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

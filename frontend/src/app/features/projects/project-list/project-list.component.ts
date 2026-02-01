@@ -1,9 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { Observable } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { Project } from '../../../core/models/project.model';
+import { User } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-project-list',
@@ -16,7 +18,7 @@ export class ProjectListComponent implements OnInit {
   projects: Project[] = [];
   loading = true;
   error = '';
-  currentUser$ = this.authService.currentUser$;
+  currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
 
   constructor(
     private authService: AuthService,
@@ -25,6 +27,9 @@ export class ProjectListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Initialize currentUser$ observable
+    this.currentUser$ = this.authService.currentUser$;
+    
     this.loadProjects();
     
     // Load current user if not already loaded

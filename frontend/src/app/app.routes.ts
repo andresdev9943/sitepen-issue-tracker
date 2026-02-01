@@ -27,6 +27,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () => import('./features/projects/projects.routes').then(m => m.projectsRoutes)
   },
+  {
+    path: 'issues',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/issues/issues.routes').then(m => m.issuesRoutes)
+  },
   
   // Wildcard route
   {

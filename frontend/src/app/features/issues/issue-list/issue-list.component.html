@@ -1,0 +1,177 @@
+<div class="list-container">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <h1 [routerLink]="['/projects']">Issue Tracker</h1>
+      <div class="nav-right" *ngIf="currentUser$ | async as user">
+        <span class="user-name">{{ user.fullName }}</span>
+        <button (click)="logout()" class="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Header -->
+    <div class="list-header">
+      <div class="header-left">
+        <button (click)="backToProjects()" class="btn-back">← Projects</button>
+        <h2>Issues</h2>
+      </div>
+      <button (click)="createIssue()" class="btn-create">+ New Issue</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+      <div class="filters-row">
+        <div class="filter-group">
+          <label>Project</label>
+          <select (change)="onProjectFilterChange($event)" [value]="selectedProjectId || ''">
+            <option value="">All Projects</option>
+            <option *ngFor="let project of projects" [value]="project.id">
+              {{ project.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Status</label>
+          <select (change)="onStatusFilterChange($event)" [value]="selectedStatus || ''">
+            <option value="">All Statuses</option>
+            <option *ngFor="let status of statusOptions" [value]="status">
+              {{ getStatusLabel(status) }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Priority</label>
+          <select (change)="onPriorityFilterChange($event)" [value]="selectedPriority || ''">
+            <option value="">All Priorities</option>
+            <option *ngFor="let priority of priorityOptions" [value]="priority">
+              {{ priority }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group search-group">
+          <label>Search</label>
+          <input
+            type="text"
+            [formControl]="searchControl"
+            placeholder="Search issues..."
+            class="search-input"
+          />
+        </div>
+
+        <button (click)="clearFilters()" class="btn-clear-filters">Clear</button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading issues...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+      <span class="error-icon">⚠️</span>
+      <p>{{ error }}</p>
+      <button (click)="loadIssues()" class="btn-retry">Retry</button>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && !error && issues.length === 0" class="empty-state">
+      <span class="empty-icon">📋</span>
+      <h3>No issues found</h3>
+      <p *ngIf="selectedProjectId || selectedStatus || selectedPriority || searchControl.value">
+        Try adjusting your filters
+      </p>
+      <p *ngIf="!selectedProjectId && !selectedStatus && !selectedPriority && !searchControl.value">
+        Create your first issue to get started
+      </p>
+      <button (click)="createIssue()" class="btn-primary">Create Issue</button>
+    </div>
+
+    <!-- Issues List -->
+    <div *ngIf="!loading && !error && issues.length > 0" class="issues-list">
+      <div
+        *ngFor="let issue of issues"
+        class="issue-card"
+        (click)="viewIssue(issue)"
+      >
+        <div class="issue-header">
+          <div class="issue-title-row">
+            <h3 class="issue-title">{{ issue.title }}</h3>
+            <span class="issue-id">#{{ issue.id }}</span>
+          </div>
+          <div class="issue-badges">
+            <span [class]="'priority-badge ' + getPriorityClass(issue.priority)">
+              {{ issue.priority }}
+            </span>
+            <span [class]="'status-badge ' + getStatusClass(issue.status)">
+              {{ getStatusLabel(issue.status) }}
+            </span>
+          </div>
+        </div>
+
+        <p class="issue-description" *ngIf="issue.description">
+          {{ issue.description }}
+        </p>
+
+        <div class="issue-footer">
+          <div class="issue-meta">
+            <span class="meta-item">
+              📁 {{ issue.projectName }}
+            </span>
+            <span class="meta-item" *ngIf="issue.assignee">
+              👤 {{ issue.assignee.fullName }}
+            </span>
+            <span class="meta-item" *ngIf="!issue.assignee">
+              👤 Unassigned
+            </span>
+          </div>
+          <span class="issue-date">
+            {{ issue.createdAt | date: 'MMM d, y' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="!loading && !error && totalPages > 1" class="pagination">
+      <button
+        (click)="previousPage()"
+        [disabled]="currentPage === 0"
+        class="btn-page"
+      >
+        ← Previous
+      </button>
+
+      <div class="page-numbers">
+        <button
+          *ngFor="let page of [].constructor(totalPages); let i = index"
+          (click)="goToPage(i)"
+          [class.active]="currentPage === i"
+          class="btn-page-number"
+        >
+          {{ i + 1 }}
+        </button>
+      </div>
+
+      <button
+        (click)="nextPage()"
+        [disabled]="currentPage >= totalPages - 1"
+        class="btn-page"
+      >
+        Next →
+      </button>
+    </div>
+
+    <div *ngIf="!loading && !error && issues.length > 0" class="results-info">
+      Showing {{ currentPage * pageSize + 1 }} - {{ currentPage * pageSize + issues.length }}
+      of {{ totalElements }} issues
+    </div>
+  </div>
+</div>

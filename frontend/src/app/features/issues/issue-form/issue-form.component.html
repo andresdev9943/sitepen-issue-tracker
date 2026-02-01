@@ -1,0 +1,150 @@
+<div class="form-container">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <h1 [routerLink]="['/projects']">Issue Tracker</h1>
+      <div class="nav-right" *ngIf="currentUser$ | async as user">
+        <span class="user-name">{{ user.fullName }}</span>
+        <button (click)="logout()" class="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="form-card">
+      <div class="form-header">
+        <h2>{{ isEditMode ? 'Edit Issue' : 'Create New Issue' }}</h2>
+      </div>
+
+      <div *ngIf="error" class="error-message">
+        {{ error }}
+      </div>
+
+      <form [formGroup]="issueForm" (ngSubmit)="onSubmit()">
+        <!-- Title -->
+        <div class="form-group">
+          <label for="title">
+            Title <span class="required">*</span>
+          </label>
+          <input
+            id="title"
+            type="text"
+            formControlName="title"
+            placeholder="Enter issue title"
+            class="form-control"
+            [class.error]="issueForm.get('title')?.invalid && issueForm.get('title')?.touched"
+          />
+          <span class="field-error" *ngIf="getFieldError('title')">
+            {{ getFieldError('title') }}
+          </span>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            formControlName="description"
+            placeholder="Describe the issue..."
+            rows="6"
+            class="form-control"
+          ></textarea>
+        </div>
+
+        <!-- Project -->
+        <div class="form-group">
+          <label for="projectId">
+            Project <span class="required">*</span>
+          </label>
+          <select
+            id="projectId"
+            formControlName="projectId"
+            class="form-control"
+            [class.error]="issueForm.get('projectId')?.invalid && issueForm.get('projectId')?.touched"
+            [disabled]="isEditMode"
+          >
+            <option value="">Select a project</option>
+            <option *ngFor="let project of projects" [value]="project.id">
+              {{ project.name }}
+            </option>
+          </select>
+          <span class="field-error" *ngIf="getFieldError('projectId')">
+            {{ getFieldError('projectId') }}
+          </span>
+        </div>
+
+        <!-- Status & Priority Row -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="status">
+              Status <span class="required">*</span>
+            </label>
+            <select
+              id="status"
+              formControlName="status"
+              class="form-control"
+            >
+              <option *ngFor="let status of statusOptions" [value]="status">
+                {{ status.replace('_', ' ') }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="priority">
+              Priority <span class="required">*</span>
+            </label>
+            <select
+              id="priority"
+              formControlName="priority"
+              class="form-control"
+            >
+              <option *ngFor="let priority of priorityOptions" [value]="priority">
+                {{ priority }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Assignee -->
+        <div class="form-group">
+          <label for="assigneeId">Assignee</label>
+          <select
+            id="assigneeId"
+            formControlName="assigneeId"
+            class="form-control"
+            [disabled]="!issueForm.get('projectId')?.value || loadingMembers"
+          >
+            <option value="">Unassigned</option>
+            <option *ngFor="let member of members" [value]="member.user.id">
+              {{ member.user.fullName }}
+            </option>
+          </select>
+          <span class="help-text" *ngIf="!issueForm.get('projectId')?.value">
+            Select a project first to choose an assignee
+          </span>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button
+            type="button"
+            (click)="cancel()"
+            class="btn-secondary"
+            [disabled]="loading"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="issueForm.invalid || loading || loadingProjects"
+          >
+            {{ loading ? 'Saving...' : (isEditMode ? 'Update Issue' : 'Create Issue') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

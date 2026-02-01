@@ -2,9 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { Observable } from 'rxjs';
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Project, ProjectMember } from '../../../core/models/project.model';
+import { User } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-project-detail',
@@ -18,7 +20,7 @@ export class ProjectDetailComponent implements OnInit {
   members: ProjectMember[] = [];
   loading = true;
   error = '';
-  currentUser$ = this.authService.currentUser$;
+  currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
   
   showAddMemberForm = false;
   addMemberForm: FormGroup;
@@ -41,6 +43,9 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Initialize currentUser$ observable
+    this.currentUser$ = this.authService.currentUser$;
+    
     const id = this.route.snapshot.params['id'];
     if (id) {
       this.loadProject(+id);
@@ -155,7 +160,7 @@ export class ProjectDetailComponent implements OnInit {
 
   viewIssues(): void {
     if (this.project) {
-      this.router.navigate(['/projects', this.project.id, 'issues']);
+      this.router.navigate(['/issues'], { queryParams: { projectId: this.project.id } });
     }
   }
 
