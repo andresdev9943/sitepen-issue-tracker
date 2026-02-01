@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, Observable } from 'rxjs';
+import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { IssueService } from '../../../core/services/issue.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -14,7 +15,7 @@ import { User } from '../../../core/models/user.model';
 @Component({
   selector: 'app-issue-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, DragDropModule],
   templateUrl: './issue-list.component.html',
   styleUrls: ['./issue-list.component.scss']
 })
@@ -24,6 +25,14 @@ export class IssueListComponent implements OnInit, OnDestroy {
   loading = true;
   error = '';
   currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
+
+  // View mode
+  viewMode: 'list' | 'board' = 'board';  // Default to board view
+
+  // Board view data
+  openIssues: Issue[] = [];
+  inProgressIssues: Issue[] = [];
+  closedIssues: Issue[] = [];
 
   // Pagination
   currentPage = 0;
@@ -123,6 +132,9 @@ export class IssueListComponent implements OnInit, OnDestroy {
           this.totalElements = response.totalElements;
           this.currentPage = response.number;
           this.loading = false;
+          
+          // Organize issues for board view
+          this.organizeIssuesForBoard();
         },
         error: (error) => {
           this.error = 'Failed to load issues';
@@ -130,6 +142,55 @@ export class IssueListComponent implements OnInit, OnDestroy {
           console.error('Error loading issues:', error);
         }
       });
+  }
+
+  organizeIssuesForBoard(): void {
+    this.openIssues = this.issues.filter(issue => issue.status === IssueStatus.OPEN);
+    this.inProgressIssues = this.issues.filter(issue => issue.status === IssueStatus.IN_PROGRESS);
+    this.closedIssues = this.issues.filter(issue => issue.status === IssueStatus.CLOSED);
+  }
+
+  toggleView(mode: 'list' | 'board'): void {
+    this.viewMode = mode;
+  }
+
+  drop(event: CdkDragDrop<Issue[]>, newStatus: IssueStatus): void {
+    if (event.previousContainer === event.container) {
+      // Same column - just reorder
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      // Different column - move and update status
+      const issue = event.previousContainer.data[event.previousIndex];
+      
+      // Transfer the item
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex
+      );
+
+      // Update issue status via API
+      this.updateIssueStatus(issue, newStatus);
+    }
+  }
+
+  updateIssueStatus(issue: Issue, newStatus: IssueStatus): void {
+    this.issueService.updateIssue(issue.id, { status: newStatus }).subscribe({
+      next: (updatedIssue) => {
+        issue.status = updatedIssue.status;
+        console.log(`Issue #${issue.id} status updated to ${newStatus}`);
+      },
+      error: (error) => {
+        console.error('Error updating issue status:', error);
+        // Reload issues on error to revert the UI change
+        this.loadIssues();
+      }
+    });
+  }
+
+  getStatusColumnId(status: IssueStatus): string {
+    return `status-${status.toLowerCase().replace('_', '-')}`;
   }
 
   onProjectFilterChange(event: Event): void {

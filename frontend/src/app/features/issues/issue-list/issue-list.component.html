@@ -18,7 +18,26 @@
         <button (click)="backToProjects()" class="btn-back">← Projects</button>
         <h2>Issues</h2>
       </div>
-      <button (click)="createIssue()" class="btn-create">+ New Issue</button>
+      <div class="header-right">
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button 
+            (click)="toggleView('list')" 
+            [class.active]="viewMode === 'list'"
+            class="toggle-btn"
+          >
+            📋 List
+          </button>
+          <button 
+            (click)="toggleView('board')" 
+            [class.active]="viewMode === 'board'"
+            class="toggle-btn"
+          >
+            📊 Board
+          </button>
+        </div>
+        <button (click)="createIssue()" class="btn-create">+ New Issue</button>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -94,8 +113,148 @@
       <button (click)="createIssue()" class="btn-primary">Create Issue</button>
     </div>
 
-    <!-- Issues List -->
-    <div *ngIf="!loading && !error && issues.length > 0" class="issues-list">
+    <!-- Board View -->
+    <div *ngIf="!loading && !error && issues.length > 0 && viewMode === 'board'" class="board-view">
+      <div class="board-columns">
+        <!-- OPEN Column -->
+        <div class="board-column">
+          <div class="column-header open-header">
+            <h3>📋 Open</h3>
+            <span class="issue-count">{{ openIssues.length }}</span>
+          </div>
+          <div 
+            cdkDropList
+            [id]="getStatusColumnId(IssueStatus.OPEN)"
+            [cdkDropListData]="openIssues"
+            [cdkDropListConnectedTo]="[getStatusColumnId(IssueStatus.IN_PROGRESS), getStatusColumnId(IssueStatus.CLOSED)]"
+            (cdkDropListDropped)="drop($event, IssueStatus.OPEN)"
+            class="column-content"
+          >
+            <div 
+              *ngFor="let issue of openIssues" 
+              cdkDrag
+              class="board-card"
+              (click)="viewIssue(issue)"
+            >
+              <div class="card-header">
+                <span class="card-id">#{{ issue.id }}</span>
+                <span [class]="'priority-badge ' + getPriorityClass(issue.priority)">
+                  {{ issue.priority }}
+                </span>
+              </div>
+              <h4 class="card-title">{{ issue.title }}</h4>
+              <p class="card-description" *ngIf="issue.description">
+                {{ issue.description }}
+              </p>
+              <div class="card-footer">
+                <span class="card-meta">
+                  📁 {{ issue.projectName }}
+                </span>
+                <span class="card-meta" *ngIf="issue.assignee">
+                  👤 {{ issue.assignee.fullName.split(' ')[0] }}
+                </span>
+              </div>
+            </div>
+            <div *ngIf="openIssues.length === 0" class="empty-column">
+              No open issues
+            </div>
+          </div>
+        </div>
+
+        <!-- IN PROGRESS Column -->
+        <div class="board-column">
+          <div class="column-header in-progress-header">
+            <h3>🔄 In Progress</h3>
+            <span class="issue-count">{{ inProgressIssues.length }}</span>
+          </div>
+          <div 
+            cdkDropList
+            [id]="getStatusColumnId(IssueStatus.IN_PROGRESS)"
+            [cdkDropListData]="inProgressIssues"
+            [cdkDropListConnectedTo]="[getStatusColumnId(IssueStatus.OPEN), getStatusColumnId(IssueStatus.CLOSED)]"
+            (cdkDropListDropped)="drop($event, IssueStatus.IN_PROGRESS)"
+            class="column-content"
+          >
+            <div 
+              *ngFor="let issue of inProgressIssues" 
+              cdkDrag
+              class="board-card"
+              (click)="viewIssue(issue)"
+            >
+              <div class="card-header">
+                <span class="card-id">#{{ issue.id }}</span>
+                <span [class]="'priority-badge ' + getPriorityClass(issue.priority)">
+                  {{ issue.priority }}
+                </span>
+              </div>
+              <h4 class="card-title">{{ issue.title }}</h4>
+              <p class="card-description" *ngIf="issue.description">
+                {{ issue.description }}
+              </p>
+              <div class="card-footer">
+                <span class="card-meta">
+                  📁 {{ issue.projectName }}
+                </span>
+                <span class="card-meta" *ngIf="issue.assignee">
+                  👤 {{ issue.assignee.fullName.split(' ')[0] }}
+                </span>
+              </div>
+            </div>
+            <div *ngIf="inProgressIssues.length === 0" class="empty-column">
+              No issues in progress
+            </div>
+          </div>
+        </div>
+
+        <!-- CLOSED Column -->
+        <div class="board-column">
+          <div class="column-header closed-header">
+            <h3>✅ Closed</h3>
+            <span class="issue-count">{{ closedIssues.length }}</span>
+          </div>
+          <div 
+            cdkDropList
+            [id]="getStatusColumnId(IssueStatus.CLOSED)"
+            [cdkDropListData]="closedIssues"
+            [cdkDropListConnectedTo]="[getStatusColumnId(IssueStatus.OPEN), getStatusColumnId(IssueStatus.IN_PROGRESS)]"
+            (cdkDropListDropped)="drop($event, IssueStatus.CLOSED)"
+            class="column-content"
+          >
+            <div 
+              *ngFor="let issue of closedIssues" 
+              cdkDrag
+              class="board-card"
+              (click)="viewIssue(issue)"
+            >
+              <div class="card-header">
+                <span class="card-id">#{{ issue.id }}</span>
+                <span [class]="'priority-badge ' + getPriorityClass(issue.priority)">
+                  {{ issue.priority }}
+                </span>
+              </div>
+              <h4 class="card-title">{{ issue.title }}</h4>
+              <p class="card-description" *ngIf="issue.description">
+                {{ issue.description }}
+              </p>
+              <div class="card-footer">
+                <span class="card-meta">
+                  📁 {{ issue.projectName }}
+                </span>
+                <span class="card-meta" *ngIf="issue.assignee">
+                  👤 {{ issue.assignee.fullName.split(' ')[0] }}
+                </span>
+              </div>
+            </div>
+            <div *ngIf="closedIssues.length === 0" class="empty-column">
+              No closed issues
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- List View (existing) -->
+    <div *ngIf="!loading && !error && issues.length > 0 && viewMode === 'list'" class="issues-list">
       <div
         *ngFor="let issue of issues"
         class="issue-card"

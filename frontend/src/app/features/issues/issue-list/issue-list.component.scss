@@ -79,6 +79,46 @@
     }
   }
 
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .view-toggle {
+    display: flex;
+    gap: 0;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    overflow: hidden;
+
+    .toggle-btn {
+      padding: 10px 20px;
+      border: none;
+      background: white;
+      color: #718096;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+      border-right: 1px solid #e2e8f0;
+
+      &:last-child {
+        border-right: none;
+      }
+
+      &:hover {
+        background: #f7fafc;
+      }
+
+      &.active {
+        background: #667eea;
+        color: white;
+      }
+    }
+  }
+
   .btn-back {
     padding: 8px 16px;
     background: white;
@@ -231,6 +271,160 @@
   }
 }
 
+// Board View Styles
+.board-view {
+  .board-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    min-height: 600px;
+  }
+
+  .board-column {
+    background: #f7fafc;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .column-header {
+    padding: 16px 20px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    font-weight: 600;
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .issue-count {
+      background: rgba(255, 255, 255, 0.3);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    &.open-header {
+      background: #4299e1;
+    }
+
+    &.in-progress-header {
+      background: #ed8936;
+    }
+
+    &.closed-header {
+      background: #48bb78;
+    }
+  }
+
+  .column-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    min-height: 200px;
+  }
+
+  .board-card {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: move;
+    transition: all 0.2s;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+
+      .card-id {
+        color: #a0aec0;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #2d3748;
+      margin: 0 0 8px 0;
+      line-height: 1.4;
+    }
+
+    .card-description {
+      font-size: 13px;
+      color: #718096;
+      margin: 0 0 12px 0;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+
+      .card-meta {
+        font-size: 12px;
+        color: #718096;
+      }
+    }
+  }
+
+  .empty-column {
+    text-align: center;
+    padding: 40px 20px;
+    color: #a0aec0;
+    font-style: italic;
+    font-size: 14px;
+  }
+
+  // CDK Drag and Drop Styles
+  .cdk-drag-preview {
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
+  }
+
+  .cdk-drag-placeholder {
+    opacity: 0.3;
+  }
+
+  .cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .cdk-drop-list-dragging .board-card:not(.cdk-drag-placeholder) {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+// List View Styles (existing)
 .issues-list {
   display: flex;
   flex-direction: column;
@@ -430,6 +624,17 @@
   margin-top: 16px;
 }
 
+@media (max-width: 1200px) {
+  .board-view .board-columns {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .board-column {
+    max-height: 500px;
+  }
+}
+
 @media (max-width: 768px) {
   .list-header {
     flex-direction: column;
@@ -439,6 +644,19 @@
     .header-left {
       flex-direction: column;
       align-items: stretch;
+    }
+
+    .header-right {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .view-toggle {
+      width: 100%;
+
+      .toggle-btn {
+        flex: 1;
+      }
     }
 
     .btn-create {

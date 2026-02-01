@@ -16,10 +16,8 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient) {
-    // Load current user on service initialization if token exists
-    if (this.getToken()) {
-      this.loadCurrentUser();
-    }
+    // Don't load user here to avoid circular dependency with HTTP interceptor
+    // User will be loaded by APP_INITIALIZER instead
   }
 
   /**
@@ -57,9 +55,14 @@ export class AuthService {
     this.http.get<User>(`${this.API_URL}/auth/current`)
       .subscribe({
         next: (user) => this.currentUserSubject.next(user),
-        error: () => {
-          // If loading user fails, clear token
-          this.logout();
+        error: (error) => {
+          // Only clear token on 401 (invalid token), not on network errors
+          if (error.status === 401) {
+            this.logout();
+          } else {
+            // For other errors (network issues, 500, etc.), just log and keep token
+            console.warn('Failed to load current user:', error);
+          }
         }
       });
   }
@@ -69,11 +72,18 @@ export class AuthService {
    */
   isAuthenticated(): boolean {
     const token = this.getToken();
+    return token !== null && this.isTokenValid(token);
+  }
+
+  /**
+   * Check if token is valid (not expired)
+   */
+  private isTokenValid(token: string): boolean {
     if (!token) {
       return false;
     }
 
-    // Check if token is expired (optional)
+    // Check if token is expired
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const exp = payload.exp * 1000; // Convert to milliseconds
