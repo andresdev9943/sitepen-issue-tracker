@@ -1,0 +1,27 @@
+<div class="projects-container">
+  <nav class="navbar">
+    <div class="nav-content">
+      <h1>Issue Tracker</h1>
+      <div class="nav-right" *ngIf="currentUser$ | async as user">
+        <span class="user-name">{{ user.fullName }}</span>
+        <button (click)="logout()" class="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="content">
+    <h2>Welcome to Issue Tracker!</h2>
+    <p>Authentication is working. Projects feature coming next...</p>
+    <div class="info-box">
+      <h3>Current Status:</h3>
+      <ul>
+        <li>✅ Authentication (Login/Register)</li>
+        <li>✅ JWT Token Management</li>
+        <li>✅ Protected Routes</li>
+        <li>⏳ Projects Module (Next)</li>
+        <li>⏳ Issues Module</li>
+        <li>⏳ Real-time Updates (SSE)</li>
+      </ul>
+    </div>
+  </div>
+</div>
