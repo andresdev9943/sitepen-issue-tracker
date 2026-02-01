@@ -70,19 +70,50 @@
 
           <div class="meta-item">
             <span class="meta-label">Reporter</span>
-            <span class="meta-value">
+            <span class="meta-value" *ngIf="issue.reporter">
               👤 {{ issue.reporter.fullName }}
+            </span>
+            <span class="meta-value empty" *ngIf="!issue.reporter">
+              Unknown
             </span>
           </div>
 
-          <div class="meta-item">
+          <div class="meta-item assignee-item">
             <span class="meta-label">Assignee</span>
-            <span class="meta-value" *ngIf="issue.assignee">
-              👤 {{ issue.assignee.fullName }}
-            </span>
-            <span class="meta-value empty" *ngIf="!issue.assignee">
-              Unassigned
-            </span>
+            <div class="assignee-section">
+              <span class="meta-value" *ngIf="issue.assignee">
+                👤 {{ issue.assignee.fullName }}
+              </span>
+              <span class="meta-value empty" *ngIf="!issue.assignee">
+                Unassigned
+              </span>
+              <button 
+                *ngIf="canUpdateAssignee()" 
+                (click)="toggleAssigneeDropdown()" 
+                class="btn-edit-assignee"
+                [disabled]="updatingAssignee"
+              >
+                {{ showAssigneeDropdown ? '✕' : '✏️' }}
+              </button>
+            </div>
+            
+            <!-- Assignee Dropdown -->
+            <div *ngIf="showAssigneeDropdown" class="assignee-dropdown">
+              <div class="assignee-option" (click)="updateAssignee(null)">
+                <span class="empty">Unassigned</span>
+              </div>
+              <div 
+                *ngFor="let user of availableAssignees" 
+                class="assignee-option"
+                (click)="updateAssignee(user.id)"
+                [class.current]="issue.assignee?.id === user.id"
+              >
+                <span>👤 {{ user.fullName }}</span>
+              </div>
+              <div *ngIf="loadingMembers" class="assignee-loading">
+                Loading members...
+              </div>
+            </div>
           </div>
 
           <div class="meta-item">
@@ -166,8 +197,50 @@
                 <div class="comment-header">
                   <span class="comment-author">{{ comment.author.fullName }}</span>
                   <span class="comment-date">{{ comment.createdAt | date: 'MMM d, y h:mm a' }}</span>
+                  <div class="comment-actions" *ngIf="canEditComment(comment)">
+                    <button (click)="startEditComment(comment)" class="btn-icon" title="Edit comment">
+                      ✏️
+                    </button>
+                    <button (click)="confirmDeleteComment(comment.id)" class="btn-icon btn-delete-icon" title="Delete comment">
+                      🗑️
+                    </button>
+                  </div>
                 </div>
-                <p class="comment-text">{{ comment.content }}</p>
+                
+                <!-- View Mode -->
+                <p class="comment-text" *ngIf="editingCommentId !== comment.id">{{ comment.content }}</p>
+                
+                <!-- Edit Mode -->
+                <div *ngIf="editingCommentId === comment.id" class="edit-comment-form">
+                  <textarea
+                    [formControl]="editCommentControl"
+                    rows="3"
+                    class="comment-input"
+                  ></textarea>
+                  <div class="edit-comment-actions">
+                    <button (click)="cancelEditComment()" class="btn-secondary" [disabled]="updatingComment">
+                      Cancel
+                    </button>
+                    <button 
+                      (click)="saveEditComment(comment)" 
+                      class="btn-primary"
+                      [disabled]="editCommentControl.invalid || updatingComment"
+                    >
+                      {{ updatingComment ? 'Saving...' : 'Save' }}
+                    </button>
+                  </div>
+                  <p class="note">Note: Comment editing will be available once backend API is implemented</p>
+                </div>
+                
+                <!-- Delete Confirmation -->
+                <div *ngIf="deletingCommentId === comment.id" class="delete-confirm">
+                  <p>Delete this comment?</p>
+                  <div class="delete-confirm-actions">
+                    <button (click)="cancelDeleteComment()" class="btn-secondary">Cancel</button>
+                    <button (click)="deleteComment(comment.id)" class="btn-danger">Delete</button>
+                  </div>
+                  <p class="note">Note: Comment deletion will be available once backend API is implemented</p>
+                </div>
               </div>
             </div>
           </div>

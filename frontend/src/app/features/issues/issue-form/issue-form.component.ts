@@ -24,10 +24,12 @@ export class IssueFormComponent implements OnInit {
   error = '';
   isEditMode = false;
   issueId?: number;
+  currentIssue?: Issue;  // Store current issue for getting reporter
   currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
 
   projects: Project[] = [];
   members: ProjectMember[] = [];
+  availableAssignees: User[] = [];  // Combined list for dropdown
   loadingProjects = true;
   loadingMembers = false;
 
@@ -108,14 +110,44 @@ export class IssueFormComponent implements OnInit {
 
   loadMembers(projectId: number): void {
     this.loadingMembers = true;
-    this.projectService.getMembers(projectId).subscribe({
-      next: (members) => {
-        this.members = members;
-        this.loadingMembers = false;
+    
+    // Load both project (for owner) and members
+    this.projectService.getProject(projectId).subscribe({
+      next: (project) => {
+        this.projectService.getMembers(projectId).subscribe({
+          next: (members) => {
+            this.members = members;
+            
+            // Build combined list of available assignees
+            const assigneeMap = new Map<number, User>();
+            
+            // Add project owner
+            assigneeMap.set(project.owner.id, project.owner);
+            
+            // Add issue reporter (if in edit mode)
+            if (this.currentIssue?.reporter) {
+              assigneeMap.set(this.currentIssue.reporter.id, this.currentIssue.reporter);
+            }
+            
+            // Add all project members
+            members.forEach(member => {
+              assigneeMap.set(member.user.id, member.user);
+            });
+            
+            // Convert map to array
+            this.availableAssignees = Array.from(assigneeMap.values());
+            this.loadingMembers = false;
+          },
+          error: (error) => {
+            console.error('Error loading members:', error);
+            this.members = [];
+            this.availableAssignees = [];
+            this.loadingMembers = false;
+          }
+        });
       },
       error: (error) => {
-        console.error('Error loading members:', error);
-        this.members = [];
+        console.error('Error loading project:', error);
         this.loadingMembers = false;
       }
     });
@@ -125,6 +157,7 @@ export class IssueFormComponent implements OnInit {
     this.loading = true;
     this.issueService.getIssue(id).subscribe({
       next: (issue) => {
+        this.currentIssue = issue;  // Store for building assignee list
         this.issueForm.patchValue({
           title: issue.title,
           description: issue.description,

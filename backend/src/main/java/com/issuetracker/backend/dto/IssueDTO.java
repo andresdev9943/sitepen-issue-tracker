@@ -39,8 +39,11 @@ public class IssueDTO {
     @Schema(description = "Assigned user")
     private UserDTO assignee;
 
-    @Schema(description = "Creator user")
-    private UserDTO createdBy;
+    @Schema(description = "Reporter (creator) of the issue")
+    private UserDTO reporter;
+
+    @Schema(description = "Project owner ID for permission checks")
+    private Long projectOwnerId;
 
     @Schema(description = "Creation timestamp")
     private LocalDateTime createdAt;

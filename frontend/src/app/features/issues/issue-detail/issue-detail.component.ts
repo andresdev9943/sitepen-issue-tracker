@@ -4,10 +4,12 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil, Observable } from 'rxjs';
 import { IssueService } from '../../../core/services/issue.service';
+import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Issue, Comment, ActivityLog } from '../../../core/models/issue.model';
 import { IssueStatus, IssuePriority } from '../../../core/models/enums';
 import { User } from '../../../core/models/user.model';
+import { ProjectMember } from '../../../core/models/project.model';
 
 @Component({
   selector: 'app-issue-detail',
@@ -20,10 +22,13 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
   issue?: Issue;
   comments: Comment[] = [];
   activityLog: ActivityLog[] = [];
+  projectMembers: ProjectMember[] = [];
+  availableAssignees: User[] = [];  // Combined list for dropdown
   
   loading = true;
   loadingComments = false;
   loadingActivity = false;
+  loadingMembers = false;
   error = '';
   
   currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
@@ -33,8 +38,18 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
   submittingComment = false;
   commentError = '';
 
+  // Assignee update
+  updatingAssignee = false;
+  showAssigneeDropdown = false;
+
+  // Comment editing
+  editingCommentId: number | null = null;
+  editCommentControl = new FormControl('', Validators.required);
+  updatingComment = false;
+
   showDeleteConfirm = false;
   deleting = false;
+  deletingCommentId: number | null = null;
 
   // Enums for template
   IssueStatus = IssueStatus;
@@ -44,6 +59,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
 
   constructor(
     private issueService: IssueService,
+    private projectService: ProjectService,
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute
@@ -79,6 +95,8 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
       next: (issue) => {
         this.issue = issue;
         this.loading = false;
+        // Load project members for permission checks
+        this.loadProjectMembers(issue.projectId);
       },
       error: (error) => {
         this.error = 'Failed to load issue';
@@ -149,13 +167,26 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) return false;
     
-    // Owner can edit, or project owner can edit
-    return this.issue.reporter.id === currentUser.id || 
-           this.issue.projectOwnerId === currentUser.id;
+    // Issue reporter can edit
+    if (this.issue.reporter?.id === currentUser.id) return true;
+    
+    // Project owner can edit
+    if (this.issue.projectOwnerId === currentUser.id) return true;
+    
+    // Any project member can edit
+    if (this.projectMembers.some(m => m.user.id === currentUser.id)) return true;
+    
+    return false;
   }
 
   canDeleteIssue(): boolean {
-    return this.canEditIssue();
+    // Only reporter and project owner can delete (not regular members)
+    if (!this.issue) return false;
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+    
+    return (this.issue.reporter?.id === currentUser.id) || 
+           (this.issue.projectOwnerId === currentUser.id);
   }
 
   editIssue(): void {
@@ -217,6 +248,129 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     if (this.issue) {
       this.router.navigate(['/projects', this.issue.projectId]);
     }
+  }
+
+  loadProjectMembers(projectId: number): void {
+    this.loadingMembers = true;
+    
+    // Load both project (for owner) and members
+    this.projectService.getProject(projectId).subscribe({
+      next: (project) => {
+        this.projectService.getMembers(projectId).subscribe({
+          next: (members: ProjectMember[]) => {
+            this.projectMembers = members;
+            
+            // Build combined list of available assignees
+            const assigneeMap = new Map<number, User>();
+            
+            // Add project owner
+            assigneeMap.set(project.owner.id, project.owner);
+            
+            // Add issue reporter
+            if (this.issue?.reporter) {
+              assigneeMap.set(this.issue.reporter.id, this.issue.reporter);
+            }
+            
+            // Add all project members
+            members.forEach(member => {
+              assigneeMap.set(member.user.id, member.user);
+            });
+            
+            // Convert map to array
+            this.availableAssignees = Array.from(assigneeMap.values());
+            this.loadingMembers = false;
+          },
+          error: (error: any) => {
+            console.error('Error loading project members:', error);
+            this.loadingMembers = false;
+          }
+        });
+      },
+      error: (error: any) => {
+        console.error('Error loading project:', error);
+        this.loadingMembers = false;
+      }
+    });
+  }
+
+  canUpdateAssignee(): boolean {
+    if (!this.issue) return false;
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+    
+    // Project owner or members can update assignee
+    return this.issue.projectOwnerId === currentUser.id ||
+           this.projectMembers.some(m => m.user.id === currentUser.id);
+  }
+
+  toggleAssigneeDropdown(): void {
+    // Don't need to load members again if already loaded
+    this.showAssigneeDropdown = !this.showAssigneeDropdown;
+  }
+
+  updateAssignee(assigneeId: number | null): void {
+    if (!this.issue) return;
+
+    this.updatingAssignee = true;
+    this.issueService.updateIssue(this.issue.id, { assigneeId: assigneeId || undefined }).subscribe({
+      next: (updatedIssue) => {
+        this.issue = updatedIssue;
+        this.updatingAssignee = false;
+        this.showAssigneeDropdown = false;
+        // Reload activity to show assignee change
+        this.loadActivityLog(this.issue!.id);
+      },
+      error: (error) => {
+        console.error('Error updating assignee:', error);
+        this.updatingAssignee = false;
+      }
+    });
+  }
+
+  canEditComment(comment: Comment): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+    return comment.author.id === currentUser.id;
+  }
+
+  startEditComment(comment: Comment): void {
+    this.editingCommentId = comment.id;
+    this.editCommentControl.setValue(comment.content);
+  }
+
+  cancelEditComment(): void {
+    this.editingCommentId = null;
+    this.editCommentControl.reset();
+  }
+
+  saveEditComment(comment: Comment): void {
+    if (this.editCommentControl.invalid || !this.issue) return;
+
+    this.updatingComment = true;
+    // Note: Backend needs to support PATCH /api/issues/{id}/comments/{commentId}
+    // For now, we'll reload after the API is implemented
+    console.warn('Comment editing API not yet implemented on backend');
+    this.updatingComment = false;
+    this.editingCommentId = null;
+    // TODO: Implement when backend supports comment editing
+  }
+
+  confirmDeleteComment(commentId: number): void {
+    this.deletingCommentId = commentId;
+  }
+
+  cancelDeleteComment(): void {
+    this.deletingCommentId = null;
+  }
+
+  deleteComment(commentId: number): void {
+    if (!this.issue) return;
+
+    // Note: Backend needs to support DELETE /api/issues/{id}/comments/{commentId}
+    // For now, we'll just log
+    console.warn('Comment deletion API not yet implemented on backend');
+    this.deletingCommentId = null;
+    // TODO: Implement when backend supports comment deletion
   }
 
   logout(): void {

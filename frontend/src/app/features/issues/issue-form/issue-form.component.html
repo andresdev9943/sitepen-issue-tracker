@@ -117,8 +117,8 @@
             [disabled]="!issueForm.get('projectId')?.value || loadingMembers"
           >
             <option value="">Unassigned</option>
-            <option *ngFor="let member of members" [value]="member.user.id">
-              {{ member.user.fullName }}
+            <option *ngFor="let user of availableAssignees" [value]="user.id">
+              {{ user.fullName }}
             </option>
           </select>
           <span class="help-text" *ngIf="!issueForm.get('projectId')?.value">

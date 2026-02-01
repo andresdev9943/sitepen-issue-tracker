@@ -320,7 +320,8 @@ public class IssueService {
         dto.setStatus(issue.getStatus());
         dto.setPriority(issue.getPriority());
         dto.setAssignee(issue.getAssignee() != null ? convertUserToDTO(issue.getAssignee()) : null);
-        dto.setCreatedBy(convertUserToDTO(issue.getCreatedBy()));
+        dto.setReporter(convertUserToDTO(issue.getCreatedBy()));
+        dto.setProjectOwnerId(issue.getProject().getOwner().getId());
         dto.setCreatedAt(issue.getCreatedAt());
         dto.setUpdatedAt(issue.getUpdatedAt());
         dto.setCommentCount((int) commentRepository.countByIssueId(issue.getId()));
