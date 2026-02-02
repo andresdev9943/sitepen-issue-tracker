@@ -82,7 +82,7 @@ public class IssueService {
         IssueDTO issueDTO = convertToDTO(savedIssue);
         
         // Broadcast SSE event
-        sseService.broadcastIssueUpdate(issueDTO, "issue-created");
+        sseService.broadcastIssueUpdate(issueDTO, "issue.created");
 
         return issueDTO;
     }
@@ -147,6 +147,10 @@ public class IssueService {
         
         User currentUser = getCurrentUser();
         StringBuilder activityDetails = new StringBuilder();
+        String eventType = "issue.updated";  // Default event type
+        boolean statusChanged = false;
+        boolean priorityChanged = false;
+        boolean assigneeChanged = false;
 
         if (request.getTitle() != null && !request.getTitle().isBlank()) {
             if (!issue.getTitle().equals(request.getTitle())) {
@@ -167,6 +171,7 @@ public class IssueService {
             if (!issue.getStatus().equals(request.getStatus())) {
                 activityDetails.append("Status changed from ").append(issue.getStatus())
                     .append(" to ").append(request.getStatus()).append(". ");
+                statusChanged = true;
             }
             issue.setStatus(request.getStatus());
         }
@@ -175,6 +180,7 @@ public class IssueService {
             if (!issue.getPriority().equals(request.getPriority())) {
                 activityDetails.append("Priority changed from ").append(issue.getPriority())
                     .append(" to ").append(request.getPriority()).append(". ");
+                priorityChanged = true;
             }
             issue.setPriority(request.getPriority());
         }
@@ -189,6 +195,7 @@ public class IssueService {
             if (issue.getAssignee() == null || !issue.getAssignee().getId().equals(newAssignee.getId())) {
                 activityDetails.append("Assignee changed from ").append(oldAssignee)
                     .append(" to ").append(newAssignee.getFullName()).append(". ");
+                assigneeChanged = true;
             }
             issue.setAssignee(newAssignee);
         }
@@ -202,9 +209,17 @@ public class IssueService {
 
         IssueDTO issueDTO = convertToDTO(updatedIssue);
         
-        // Broadcast SSE event if there were changes
+        // Broadcast SSE event with specific event type if there were changes
         if (activityDetails.length() > 0) {
-            sseService.broadcastIssueUpdate(issueDTO, "issue-updated");
+            // Use more specific event types for better frontend handling
+            if (statusChanged) {
+                eventType = "issue.status.changed";
+            } else if (priorityChanged) {
+                eventType = "issue.priority.changed";
+            } else if (assigneeChanged) {
+                eventType = "issue.assigned";
+            }
+            sseService.broadcastIssueUpdate(issueDTO, eventType);
         }
 
         return issueDTO;
@@ -217,6 +232,10 @@ public class IssueService {
         
         // Only project owner can delete issues
         checkUserIsProjectOwner(project);
+        
+        // Broadcast SSE event before deletion
+        IssueDTO issueDTO = convertToDTO(issue);
+        sseService.broadcastIssueUpdate(issueDTO, "issue.deleted");
         
         issueRepository.delete(issue);
     }
@@ -241,9 +260,12 @@ public class IssueService {
                 ? request.getContent().substring(0, 50) + "..." 
                 : request.getContent()));
 
+        // Reload issue to get updated comment count
+        Issue reloadedIssue = findIssueById(issueId);
+        
         // Broadcast SSE event for issue update (comment count changed)
-        IssueDTO issueDTO = convertToDTO(issue);
-        sseService.broadcastIssueUpdate(issueDTO, "issue-commented");
+        IssueDTO issueDTO = convertToDTO(reloadedIssue);
+        sseService.broadcastIssueUpdate(issueDTO, "issue.updated");
 
         return convertCommentToDTO(savedComment);
     }
@@ -291,9 +313,10 @@ public class IssueService {
         logActivity(issue, currentUser, "Comment edited", 
             "Comment edited (ID: " + commentId + ")");
         
-        // Broadcast SSE event
-        IssueDTO issueDTO = convertToDTO(issue);
-        sseService.broadcastIssueUpdate(issueDTO, "comment-updated");
+        // Reload issue to get fresh data, then broadcast SSE event
+        Issue reloadedIssue = findIssueById(issueId);
+        IssueDTO issueDTO = convertToDTO(reloadedIssue);
+        sseService.broadcastIssueUpdate(issueDTO, "issue.updated");
         
         return convertCommentToDTO(updatedComment);
     }
@@ -323,9 +346,10 @@ public class IssueService {
         logActivity(issue, currentUser, "Comment deleted", 
             "Comment deleted (ID: " + commentId + ")");
         
-        // Broadcast SSE event
-        IssueDTO issueDTO = convertToDTO(issue);
-        sseService.broadcastIssueUpdate(issueDTO, "comment-deleted");
+        // Reload issue to get updated comment count, then broadcast SSE event
+        Issue reloadedIssue = findIssueById(issueId);
+        IssueDTO issueDTO = convertToDTO(reloadedIssue);
+        sseService.broadcastIssueUpdate(issueDTO, "issue.updated");
     }
 
     // Helper methods

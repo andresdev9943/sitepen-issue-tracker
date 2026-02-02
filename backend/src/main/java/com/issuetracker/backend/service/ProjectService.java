@@ -32,6 +32,9 @@ public class ProjectService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private SseService sseService;
+
     @Transactional
     public ProjectDTO createProject(CreateProjectRequest request) {
         User currentUser = getCurrentUser();
@@ -72,13 +75,35 @@ public class ProjectService {
         }
 
         Project updatedProject = projectRepository.save(project);
-        return convertToDTO(updatedProject);
+        ProjectDTO projectDTO = convertToDTO(updatedProject);
+        
+        // Get all member user IDs
+        List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
+        List<UUID> memberUserIds = members.stream()
+            .map(member -> member.getUser().getId())
+            .collect(Collectors.toList());
+        
+        // Broadcast SSE event to all members
+        sseService.broadcastProjectEventToMembers(projectDTO, "project.updated", memberUserIds);
+        
+        return projectDTO;
     }
 
     @Transactional
     public void deleteProject(UUID id) {
         Project project = findProjectById(id);
         checkUserIsOwner(project);
+        
+        // Get all member user IDs before deletion
+        List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
+        List<UUID> memberUserIds = members.stream()
+            .map(member -> member.getUser().getId())
+            .collect(Collectors.toList());
+        
+        // Broadcast SSE event to all members
+        ProjectDTO projectDTO = convertToDTO(project);
+        sseService.broadcastProjectEventToMembers(projectDTO, "project.deleted", memberUserIds);
+        
         projectRepository.delete(project);
     }
 
@@ -106,6 +131,11 @@ public class ProjectService {
         member.setRole(ProjectRole.MEMBER);
 
         ProjectMember savedMember = projectMemberRepository.save(member);
+        
+        // Broadcast SSE event to the added user
+        ProjectDTO projectDTO = convertToDTO(project);
+        sseService.broadcastProjectEventToUser(userToAdd.getId(), projectDTO, "project.member.added");
+        
         return convertMemberToDTO(savedMember);
     }
 
@@ -119,6 +149,10 @@ public class ProjectService {
         }
 
         projectMemberRepository.deleteByProjectIdAndUserId(projectId, userId);
+        
+        // Broadcast SSE event to the removed user
+        ProjectDTO projectDTO = convertToDTO(project);
+        sseService.broadcastProjectEventToUser(userId, projectDTO, "project.member.removed");
     }
 
     public List<ProjectMemberDTO> getProjectMembers(UUID projectId) {

@@ -2,11 +2,12 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil, Observable } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil, Observable, Subscription } from 'rxjs';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { IssueService } from '../../../core/services/issue.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { SseService } from '../../../core/services/sse.service';
 import { Issue, PageResponse } from '../../../core/models/issue.model';
 import { IssueStatus, IssuePriority } from '../../../core/models/enums';
 import { Project } from '../../../core/models/project.model';
@@ -53,11 +54,13 @@ export class IssueListComponent implements OnInit, OnDestroy {
   priorityOptions = Object.values(IssuePriority);
 
   private destroy$ = new Subject<void>();
+  private sseSubscription?: Subscription;
 
   constructor(
     private issueService: IssueService,
     private projectService: ProjectService,
     private authService: AuthService,
+    private sseService: SseService,
     private router: Router,
     private route: ActivatedRoute
   ) {}
@@ -93,11 +96,131 @@ export class IssueListComponent implements OnInit, OnDestroy {
         this.currentPage = 0;
         this.loadIssues();
       });
+
+    // Subscribe to SSE for real-time updates
+    this.subscribeToIssueUpdates();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Clean up SSE subscriptions
+    if (this.sseSubscription) {
+      this.sseSubscription.unsubscribe();
+    }
+    if (this.selectedProjectId) {
+      this.sseService.closeConnection(`project-${this.selectedProjectId}`);
+    } else {
+      this.sseService.closeConnection('all-issues');
+    }
+  }
+
+  private subscribeToIssueUpdates(): void {
+    // Subscribe to project-specific or all issues based on filter
+    const observable = this.selectedProjectId
+      ? this.sseService.subscribeToProjectIssues(this.selectedProjectId)
+      : this.sseService.subscribeToAllIssues();
+
+    this.sseSubscription = observable.subscribe({
+      next: (event) => {
+        console.log('Issue event received:', event);
+        
+        switch (event.type) {
+          case 'issue.created':
+            this.handleIssueCreated(event.data);
+            break;
+          
+          case 'issue.updated':
+          case 'issue.status.changed':
+          case 'issue.priority.changed':
+          case 'issue.assigned':
+            this.handleIssueUpdated(event.data);
+            break;
+          
+          case 'issue.deleted':
+            this.handleIssueDeleted(event.data);
+            break;
+        }
+      },
+      error: (error) => {
+        console.error('SSE connection error:', error);
+      }
+    });
+  }
+
+  private handleIssueCreated(issue: Issue): void {
+    // Check if issue matches current filters
+    if (!this.matchesFilters(issue)) {
+      return;
+    }
+
+    // Add to list if not already present
+    const exists = this.issues.some(i => i.id === issue.id);
+    if (!exists) {
+      this.issues = [issue, ...this.issues];
+      this.totalElements++;
+      this.organizeIssuesForBoard();
+      console.log('Issue added to list:', issue.title);
+    }
+  }
+
+  private handleIssueUpdated(issue: Issue): void {
+    // Update issue in list
+    const index = this.issues.findIndex(i => i.id === issue.id);
+    
+    if (index !== -1) {
+      // Check if issue still matches filters
+      if (this.matchesFilters(issue)) {
+        this.issues[index] = issue;
+        this.issues = [...this.issues]; // Trigger change detection
+        this.organizeIssuesForBoard();
+        console.log('Issue updated in list:', issue.title);
+      } else {
+        // Issue no longer matches filters, remove it
+        this.handleIssueDeleted(issue);
+      }
+    } else if (this.matchesFilters(issue)) {
+      // Issue wasn't in list but now matches filters
+      this.handleIssueCreated(issue);
+    }
+  }
+
+  private handleIssueDeleted(issue: Issue): void {
+    // Remove issue from list
+    const originalLength = this.issues.length;
+    this.issues = this.issues.filter(i => i.id !== issue.id);
+    
+    if (this.issues.length < originalLength) {
+      this.totalElements = Math.max(0, this.totalElements - 1);
+      this.organizeIssuesForBoard();
+      console.log('Issue removed from list:', issue.title);
+    }
+  }
+
+  private matchesFilters(issue: Issue): boolean {
+    // Check project filter
+    if (this.selectedProjectId && issue.projectId !== this.selectedProjectId) {
+      return false;
+    }
+
+    // Check status filter
+    if (this.selectedStatus && issue.status !== this.selectedStatus) {
+      return false;
+    }
+
+    // Check priority filter
+    if (this.selectedPriority && issue.priority !== this.selectedPriority) {
+      return false;
+    }
+
+    // Check search text (simplified - backend does full text search)
+    const searchText = this.searchControl.value?.toLowerCase();
+    if (searchText && !issue.title.toLowerCase().includes(searchText)) {
+      return false;
+    }
+
+    return true;
   }
 
   loadProjects(): void {

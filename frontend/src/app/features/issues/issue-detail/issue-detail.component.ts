@@ -2,10 +2,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { Subject, takeUntil, Observable } from 'rxjs';
+import { Subject, takeUntil, Observable, Subscription } from 'rxjs';
 import { IssueService } from '../../../core/services/issue.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { SseService } from '../../../core/services/sse.service';
 import { Issue, Comment, ActivityLog } from '../../../core/models/issue.model';
 import { IssueStatus, IssuePriority } from '../../../core/models/enums';
 import { User } from '../../../core/models/user.model';
@@ -56,11 +57,13 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
   IssuePriority = IssuePriority;
 
   private destroy$ = new Subject<void>();
+  private sseSubscription?: Subscription;
 
   constructor(
     private issueService: IssueService,
     private projectService: ProjectService,
     private authService: AuthService,
+    private sseService: SseService,
     private router: Router,
     private route: ActivatedRoute
   ) {}
@@ -80,11 +83,87 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     if (!this.authService.getCurrentUser()) {
       this.authService.loadCurrentUser();
     }
+
+    // Subscribe to SSE for real-time updates
+    if (id) {
+      this.subscribeToIssueUpdates(id);
+    }
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Clean up SSE subscription
+    if (this.sseSubscription) {
+      this.sseSubscription.unsubscribe();
+    }
+    if (this.issue) {
+      this.sseService.closeConnection(`project-${this.issue.projectId}`);
+    }
+  }
+
+  private subscribeToIssueUpdates(issueId: string): void {
+    // We'll subscribe to the project's issues since we don't have issue-specific SSE
+    // We'll filter for our specific issue
+    this.issueService.getIssue(issueId).subscribe({
+      next: (issue) => {
+        const observable = this.sseService.subscribeToProjectIssues(issue.projectId);
+        
+        this.sseSubscription = observable.subscribe({
+          next: (event) => {
+            // Only process events for this specific issue
+            if (event.data.id !== issueId) {
+              return;
+            }
+
+            console.log('Issue update received:', event);
+            
+            switch (event.type) {
+              case 'issue.updated':
+              case 'issue.status.changed':
+              case 'issue.priority.changed':
+              case 'issue.assigned':
+                this.handleIssueUpdated(event.data);
+                break;
+              
+              case 'issue.deleted':
+                this.handleIssueDeleted();
+                break;
+            }
+          },
+          error: (error) => {
+            console.error('SSE connection error:', error);
+          }
+        });
+      }
+    });
+  }
+
+  private handleIssueUpdated(updatedIssue: Issue): void {
+    if (this.issue) {
+      const oldCommentCount = this.issue.commentCount;
+      
+      // Update issue data
+      this.issue = { ...this.issue, ...updatedIssue };
+      console.log('Issue updated:', updatedIssue.title);
+      
+      // Reload comments if comment count changed
+      if (updatedIssue.commentCount !== oldCommentCount) {
+        console.log('Comment count changed, reloading comments...');
+        this.loadComments(this.issue.id);
+      }
+      
+      // Always reload activity log to show the update
+      this.loadActivityLog(this.issue.id);
+    }
+  }
+
+  private handleIssueDeleted(): void {
+    console.log('Issue was deleted, redirecting...');
+    this.router.navigate(['/issues'], {
+      queryParams: this.issue ? { projectId: this.issue.projectId } : {}
+    });
   }
 
   loadIssue(id: string): void {  // UUID

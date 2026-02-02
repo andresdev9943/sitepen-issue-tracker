@@ -77,6 +77,25 @@ public class SseController {
         return sseService.createEmitter(projectId);
     }
 
+    @GetMapping(value = "/user", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(
+        summary = "Subscribe to user-specific events",
+        description = "Creates a Server-Sent Events connection to receive real-time updates for user-specific events " +
+                      "such as being added to or removed from projects, project deletions, etc."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "SSE connection established successfully",
+            content = @Content(mediaType = "text/event-stream")
+        ),
+        @ApiResponse(responseCode = "401", description = "Not authenticated")
+    })
+    public SseEmitter subscribeToUserEvents() {
+        User currentUser = getCurrentUser();
+        return sseService.createUserEmitter(currentUser.getId());
+    }
+
     @GetMapping("/stats")
     @Operation(
         summary = "Get SSE connection statistics",
