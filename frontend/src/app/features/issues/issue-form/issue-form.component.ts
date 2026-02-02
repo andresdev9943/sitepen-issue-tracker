@@ -188,14 +188,28 @@ export class IssueFormComponent implements OnInit {
     this.error = '';
 
     const formValue = this.issueForm.value;
-    const request = {
+    const request: any = {
       title: formValue.title,
       description: formValue.description || undefined,
-      projectId: formValue.projectId,  // Already a string (UUID)
       status: formValue.status,
-      priority: formValue.priority,
-      assigneeId: formValue.assigneeId || undefined  // Already a string (UUID)
+      priority: formValue.priority
     };
+    
+    // Handle projectId (required for create, not sent for update)
+    if (!this.isEditMode) {
+      request.projectId = formValue.projectId;
+    }
+    
+    // Handle assigneeId: 
+    // - For create: only send if a user is selected
+    // - For update: always send (null means unassign, UUID means assign)
+    if (this.isEditMode) {
+      request.assigneeId = formValue.assigneeId || null;
+    } else {
+      if (formValue.assigneeId) {
+        request.assigneeId = formValue.assigneeId;
+      }
+    }
 
     const operation = this.isEditMode && this.issueId
       ? this.issueService.updateIssue(this.issueId, request as UpdateIssueRequest)

@@ -185,9 +185,24 @@ public class IssueService {
             issue.setPriority(request.getPriority());
         }
 
-        if (request.getAssigneeId() != null) {
-            User newAssignee = userRepository.findById(request.getAssigneeId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getAssigneeId()));
+        // Handle assignee update - check if assigneeId field is present in request
+        // We need to use reflection or a wrapper to detect if the field was sent
+        // For now, we'll handle both null (unassign) and non-null (assign) cases
+        // The frontend sends null explicitly when "Unassigned" is selected
+        UUID requestAssigneeId = request.getAssigneeId();
+        if (requestAssigneeId == null) {
+            // Explicitly set to null to unassign
+            if (issue.getAssignee() != null) {
+                String oldAssignee = issue.getAssignee().getFullName();
+                activityDetails.append("Assignee changed from ").append(oldAssignee)
+                    .append(" to Unassigned. ");
+                assigneeChanged = true;
+                issue.setAssignee(null);
+            }
+        } else {
+            // Assign to a user
+            User newAssignee = userRepository.findById(requestAssigneeId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", requestAssigneeId));
             
             checkUserHasProjectAccessById(issue.getProject(), newAssignee.getId());
             
