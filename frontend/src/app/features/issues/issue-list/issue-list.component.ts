@@ -172,8 +172,11 @@ export class IssueListComponent implements OnInit, OnDestroy {
     // Add to list if not already present
     const exists = this.issues.some(i => i.id === issue.id);
     if (!exists) {
-      this.issues = [issue, ...this.issues];
+      this.issues.push(issue);
       this.totalElements++;
+      // Re-sort the main issues array for list view
+      this.issues = this.sortIssues(this.issues);
+      // Organize for board view
       this.organizeIssuesForBoard();
       console.log('Issue added to list:', issue.title);
     }
@@ -187,7 +190,9 @@ export class IssueListComponent implements OnInit, OnDestroy {
       // Check if issue still matches filters
       if (this.matchesFilters(issue)) {
         this.issues[index] = issue;
-        this.issues = [...this.issues]; // Trigger change detection
+        // Re-sort the main issues array for list view (title, priority, etc might have changed)
+        this.issues = this.sortIssues([...this.issues]);
+        // Organize for board view
         this.organizeIssuesForBoard();
         console.log('Issue updated in list:', issue.title);
       } else {
@@ -274,7 +279,10 @@ export class IssueListComponent implements OnInit, OnDestroy {
           this.currentPage = response.number;
           this.loading = false;
           
-          // Organize issues for board view
+          // Apply client-side sorting to ensure list view is sorted correctly
+          this.issues = this.sortIssues(this.issues);
+          
+          // Organize issues for board view (applies sorting to each column)
           this.organizeIssuesForBoard();
         },
         error: (error) => {
@@ -286,9 +294,45 @@ export class IssueListComponent implements OnInit, OnDestroy {
   }
 
   organizeIssuesForBoard(): void {
+    // Filter by status
     this.openIssues = this.issues.filter(issue => issue.status === IssueStatus.OPEN);
     this.inProgressIssues = this.issues.filter(issue => issue.status === IssueStatus.IN_PROGRESS);
     this.closedIssues = this.issues.filter(issue => issue.status === IssueStatus.CLOSED);
+    
+    // Sort each column independently based on current sort criteria
+    this.openIssues = this.sortIssues(this.openIssues);
+    this.inProgressIssues = this.sortIssues(this.inProgressIssues);
+    this.closedIssues = this.sortIssues(this.closedIssues);
+  }
+
+  private sortIssues(issues: Issue[]): Issue[] {
+    return [...issues].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (this.sortBy) {
+        case 'createdAt':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'priority':
+          // Priority order: CRITICAL > HIGH > MEDIUM > LOW
+          const priorityOrder = { 'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+          break;
+        case 'title':
+          comparison = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+          break;
+        case 'status':
+          // Status order: OPEN > IN_PROGRESS > CLOSED
+          const statusOrder = { 'OPEN': 1, 'IN_PROGRESS': 2, 'CLOSED': 3 };
+          comparison = statusOrder[a.status] - statusOrder[b.status];
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      // Apply sort direction
+      return this.sortDir === 'desc' ? -comparison : comparison;
+    });
   }
 
   toggleView(mode: 'list' | 'board'): void {
