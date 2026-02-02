@@ -73,6 +73,15 @@
           </select>
         </div>
 
+        <div class="filter-group">
+          <label>Sort By</label>
+          <select (change)="onSortChange($event)" [value]="getCurrentSortValue()">
+            <option *ngFor="let option of sortOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+
         <div class="filter-group search-group">
           <label>Search</label>
           <input

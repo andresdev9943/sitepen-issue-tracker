@@ -47,6 +47,20 @@ export class IssueListComponent implements OnInit, OnDestroy {
   selectedPriority?: IssuePriority;
   searchControl = new FormControl('');
 
+  // Sorting
+  sortBy = 'createdAt';
+  sortDir = 'desc';
+  sortOptions = [
+    { label: 'Newest First', value: 'createdAt:desc' },
+    { label: 'Oldest First', value: 'createdAt:asc' },
+    { label: 'Priority: High to Low', value: 'priority:desc' },
+    { label: 'Priority: Low to High', value: 'priority:asc' },
+    { label: 'Title: A-Z', value: 'title:asc' },
+    { label: 'Title: Z-A', value: 'title:desc' },
+    { label: 'Status: Open First', value: 'status:asc' },
+    { label: 'Status: Closed First', value: 'status:desc' }
+  ];
+
   // Enums for template
   IssueStatus = IssueStatus;
   IssuePriority = IssuePriority;
@@ -238,6 +252,9 @@ export class IssueListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = '';
 
+    // Construct sort parameter in the format "field,direction"
+    const sortParam = `${this.sortBy},${this.sortDir}`;
+
     this.issueService
       .getIssues(
         this.selectedProjectId,
@@ -246,7 +263,8 @@ export class IssueListComponent implements OnInit, OnDestroy {
         undefined, // assigneeId
         this.searchControl.value || undefined,
         this.currentPage,
-        this.pageSize
+        this.pageSize,
+        sortParam
       )
       .subscribe({
         next: (response: PageResponse<Issue>) => {
@@ -337,11 +355,26 @@ export class IssueListComponent implements OnInit, OnDestroy {
     this.loadIssues();
   }
 
+  onSortChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const [field, direction] = select.value.split(':');
+    this.sortBy = field;
+    this.sortDir = direction;
+    this.currentPage = 0;
+    this.loadIssues();
+  }
+
+  getCurrentSortValue(): string {
+    return `${this.sortBy}:${this.sortDir}`;
+  }
+
   clearFilters(): void {
     this.selectedProjectId = undefined;
     this.selectedStatus = undefined;
     this.selectedPriority = undefined;
     this.searchControl.setValue('');
+    this.sortBy = 'createdAt';
+    this.sortDir = 'desc';
     this.currentPage = 0;
     this.loadIssues();
   }
