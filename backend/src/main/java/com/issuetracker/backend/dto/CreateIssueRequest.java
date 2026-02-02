@@ -9,6 +9,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,8 +18,8 @@ import lombok.NoArgsConstructor;
 public class CreateIssueRequest {
 
     @NotNull(message = "Project ID is required")
-    @Schema(description = "Project ID", example = "1")
-    private Long projectId;
+    @Schema(description = "Project ID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID projectId;
 
     @NotBlank(message = "Title is required")
     @Schema(description = "Issue title", example = "Bug in login page")
@@ -29,6 +31,6 @@ public class CreateIssueRequest {
     @Schema(description = "Issue priority", example = "HIGH", defaultValue = "MEDIUM")
     private IssuePriority priority;
 
-    @Schema(description = "Assignee user ID", example = "2")
-    private Long assigneeId;
+    @Schema(description = "Assignee user ID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID assigneeId;
 }

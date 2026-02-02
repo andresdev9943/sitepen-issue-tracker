@@ -11,14 +11,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface IssueRepository extends JpaRepository<Issue, Long> {
+public interface IssueRepository extends JpaRepository<Issue, UUID> {
     
     // Basic queries
-    List<Issue> findByProjectId(Long projectId);
+    List<Issue> findByProjectId(UUID projectId);
     
-    Page<Issue> findByProjectId(Long projectId, Pageable pageable);
+    Page<Issue> findByProjectId(UUID projectId, Pageable pageable);
     
     // Filtered queries with pagination  
     @Query("SELECT i FROM Issue i WHERE " +
@@ -27,14 +28,14 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
            "(:priority IS NULL OR i.priority = :priority) AND " +
            "(:assigneeId IS NULL OR i.assignee.id = :assigneeId)")
     Page<Issue> findByFilters(
-        @Param("projectId") Long projectId,
+        @Param("projectId") UUID projectId,
         @Param("status") IssueStatus status,
         @Param("priority") IssuePriority priority,
-        @Param("assigneeId") Long assigneeId,
+        @Param("assigneeId") UUID assigneeId,
         @Param("search") String search,
         Pageable pageable
     );
     
     // Count issues by project
-    long countByProjectId(Long projectId);
+    long countByProjectId(UUID projectId);
 }

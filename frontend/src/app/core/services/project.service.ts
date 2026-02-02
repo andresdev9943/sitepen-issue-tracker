@@ -28,7 +28,7 @@ export class ProjectService {
   /**
    * Get project by ID
    */
-  getProject(id: number): Observable<Project> {
+  getProject(id: string): Observable<Project> {  // UUID
     return this.http.get<Project>(`${this.API_URL}/${id}`);
   }
 
@@ -42,35 +42,35 @@ export class ProjectService {
   /**
    * Update project
    */
-  updateProject(id: number, request: UpdateProjectRequest): Observable<Project> {
+  updateProject(id: string, request: UpdateProjectRequest): Observable<Project> {  // UUID
     return this.http.put<Project>(`${this.API_URL}/${id}`, request);
   }
 
   /**
    * Delete project
    */
-  deleteProject(id: number): Observable<void> {
+  deleteProject(id: string): Observable<void> {  // UUID
     return this.http.delete<void>(`${this.API_URL}/${id}`);
   }
 
   /**
    * Get project members
    */
-  getMembers(projectId: number): Observable<ProjectMember[]> {
+  getMembers(projectId: string): Observable<ProjectMember[]> {  // UUID
     return this.http.get<ProjectMember[]>(`${this.API_URL}/${projectId}/members`);
   }
 
   /**
    * Add member to project
    */
-  addMember(projectId: number, request: AddMemberRequest): Observable<ProjectMember> {
+  addMember(projectId: string, request: AddMemberRequest): Observable<ProjectMember> {  // UUID
     return this.http.post<ProjectMember>(`${this.API_URL}/${projectId}/members`, request);
   }
 
   /**
    * Remove member from project
    */
-  removeMember(projectId: number, userId: number): Observable<void> {
+  removeMember(projectId: string, userId: string): Observable<void> {  // UUID
     return this.http.delete<void>(`${this.API_URL}/${projectId}/members/${userId}`);
   }
 }

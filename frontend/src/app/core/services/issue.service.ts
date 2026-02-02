@@ -25,10 +25,10 @@ export class IssueService {
    * Get paginated and filtered issues
    */
   getIssues(
-    projectId?: number,
+    projectId?: string,  // UUID
     status?: IssueStatus,
     priority?: IssuePriority,
-    assigneeId?: number,
+    assigneeId?: string,  // UUID
     search?: string,
     page: number = 0,
     size: number = 20,
@@ -61,7 +61,7 @@ export class IssueService {
   /**
    * Get single issue by ID
    */
-  getIssue(id: number): Observable<Issue> {
+  getIssue(id: string): Observable<Issue> {  // UUID
     return this.http.get<Issue>(`${this.API_URL}/${id}`);
   }
 
@@ -75,42 +75,59 @@ export class IssueService {
   /**
    * Update existing issue
    */
-  updateIssue(id: number, request: UpdateIssueRequest): Observable<Issue> {
+  updateIssue(id: string, request: UpdateIssueRequest): Observable<Issue> {  // UUID
     return this.http.put<Issue>(`${this.API_URL}/${id}`, request);
   }
 
   /**
    * Delete issue
    */
-  deleteIssue(id: number): Observable<void> {
+  deleteIssue(id: string): Observable<void> {  // UUID
     return this.http.delete<void>(`${this.API_URL}/${id}`);
   }
 
   /**
    * Get comments for an issue
    */
-  getComments(issueId: number): Observable<Comment[]> {
+  getComments(issueId: string): Observable<Comment[]> {  // UUID
     return this.http.get<Comment[]>(`${this.API_URL}/${issueId}/comments`);
   }
 
   /**
    * Add comment to issue
    */
-  addComment(issueId: number, request: CreateCommentRequest): Observable<Comment> {
+  addComment(issueId: string, request: CreateCommentRequest): Observable<Comment> {  // UUID
     return this.http.post<Comment>(`${this.API_URL}/${issueId}/comments`, request);
+  }
+
+  /**
+   * Update comment
+   */
+  updateComment(issueId: string, commentId: string, content: string): Observable<Comment> {  // UUID
+    return this.http.put<Comment>(
+      `${this.API_URL}/${issueId}/comments/${commentId}`,
+      { content }
+    );
+  }
+
+  /**
+   * Delete comment
+   */
+  deleteComment(issueId: string, commentId: string): Observable<void> {  // UUID
+    return this.http.delete<void>(`${this.API_URL}/${issueId}/comments/${commentId}`);
   }
 
   /**
    * Get activity log for an issue
    */
-  getActivityLog(issueId: number): Observable<ActivityLog[]> {
+  getActivityLog(issueId: string): Observable<ActivityLog[]> {  // UUID
     return this.http.get<ActivityLog[]>(`${this.API_URL}/${issueId}/activity`);
   }
 
   /**
    * Get issues by project (non-paginated)
    */
-  getIssuesByProject(projectId: number): Observable<Issue[]> {
+  getIssuesByProject(projectId: string): Observable<Issue[]> {  // UUID
     return this.http.get<Issue[]>(`${this.API_URL}/project/${projectId}`);
   }
 }

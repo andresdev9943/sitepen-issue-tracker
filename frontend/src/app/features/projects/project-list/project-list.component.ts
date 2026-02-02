@@ -55,7 +55,7 @@ export class ProjectListComponent implements OnInit {
     });
   }
 
-  viewProject(id: number): void {
+  viewProject(id: string): void {  // UUID
     this.router.navigate(['/projects', id]);
   }
 

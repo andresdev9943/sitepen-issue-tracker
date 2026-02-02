@@ -9,18 +9,19 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
+public interface ProjectMemberRepository extends JpaRepository<ProjectMember, UUID> {
     
-    List<ProjectMember> findByProjectId(Long projectId);
+    List<ProjectMember> findByProjectId(UUID projectId);
     
-    Optional<ProjectMember> findByProjectIdAndUserId(Long projectId, Long userId);
+    Optional<ProjectMember> findByProjectIdAndUserId(UUID projectId, UUID userId);
     
-    boolean existsByProjectIdAndUserId(Long projectId, Long userId);
+    boolean existsByProjectIdAndUserId(UUID projectId, UUID userId);
     
-    void deleteByProjectIdAndUserId(Long projectId, Long userId);
+    void deleteByProjectIdAndUserId(UUID projectId, UUID userId);
     
     @Query("SELECT pm.role FROM ProjectMember pm WHERE pm.project.id = :projectId AND pm.user.id = :userId")
-    Optional<ProjectRole> findRoleByProjectIdAndUserId(@Param("projectId") Long projectId, @Param("userId") Long userId);
+    Optional<ProjectRole> findRoleByProjectIdAndUserId(@Param("projectId") UUID projectId, @Param("userId") UUID userId);
 }

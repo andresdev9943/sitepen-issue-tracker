@@ -19,7 +19,7 @@ export class ProjectFormComponent implements OnInit {
   loading = false;
   error = '';
   isEditMode = false;
-  projectId?: number;
+  projectId?: string;  // UUID
   currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
 
   constructor(
@@ -43,7 +43,7 @@ export class ProjectFormComponent implements OnInit {
     const id = this.route.snapshot.params['id'];
     if (id && id !== 'new') {
       this.isEditMode = true;
-      this.projectId = +id;
+      this.projectId = id;  // Now a string (UUID)
       this.loadProject();
     }
 

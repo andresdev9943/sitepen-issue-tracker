@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -15,11 +16,11 @@ import java.time.LocalDateTime;
 @Schema(description = "Issue information")
 public class IssueDTO {
 
-    @Schema(description = "Issue ID", example = "1")
-    private Long id;
+    @Schema(description = "Issue ID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID id;
 
-    @Schema(description = "Project ID", example = "1")
-    private Long projectId;
+    @Schema(description = "Project ID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID projectId;
 
     @Schema(description = "Project name", example = "My Project")
     private String projectName;
@@ -43,7 +44,7 @@ public class IssueDTO {
     private UserDTO reporter;
 
     @Schema(description = "Project owner ID for permission checks")
-    private Long projectOwnerId;
+    private UUID projectOwnerId;
 
     @Schema(description = "Creation timestamp")
     private LocalDateTime createdAt;

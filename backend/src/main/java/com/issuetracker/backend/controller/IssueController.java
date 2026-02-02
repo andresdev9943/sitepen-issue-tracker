@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/issues")
@@ -66,7 +67,7 @@ public class IssueController {
     })
     public ResponseEntity<Page<IssueDTO>> getIssues(
             @Parameter(description = "Project ID filter") 
-            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) UUID projectId,
             
             @Parameter(description = "Status filter") 
             @RequestParam(required = false) IssueStatus status,
@@ -75,7 +76,7 @@ public class IssueController {
             @RequestParam(required = false) IssuePriority priority,
             
             @Parameter(description = "Assignee ID filter") 
-            @RequestParam(required = false) Long assigneeId,
+            @RequestParam(required = false) UUID assigneeId,
             
             @Parameter(description = "Text search on title") 
             @RequestParam(required = false) String search,
@@ -112,7 +113,7 @@ public class IssueController {
         @ApiResponse(responseCode = "403", description = "No access to project"),
         @ApiResponse(responseCode = "404", description = "Issue not found")
     })
-    public ResponseEntity<IssueDTO> getIssueById(@PathVariable Long id) {
+    public ResponseEntity<IssueDTO> getIssueById(@PathVariable UUID id) {
         IssueDTO issue = issueService.getIssueById(id);
         return ResponseEntity.ok(issue);
     }
@@ -134,7 +135,7 @@ public class IssueController {
         @ApiResponse(responseCode = "404", description = "Issue not found")
     })
     public ResponseEntity<IssueDTO> updateIssue(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateIssueRequest request) {
         IssueDTO issue = issueService.updateIssue(id, request);
         return ResponseEntity.ok(issue);
@@ -151,7 +152,7 @@ public class IssueController {
         @ApiResponse(responseCode = "403", description = "Only project owner can delete"),
         @ApiResponse(responseCode = "404", description = "Issue not found")
     })
-    public ResponseEntity<Void> deleteIssue(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteIssue(@PathVariable UUID id) {
         issueService.deleteIssue(id);
         return ResponseEntity.noContent().build();
     }
@@ -173,7 +174,7 @@ public class IssueController {
         @ApiResponse(responseCode = "404", description = "Issue not found")
     })
     public ResponseEntity<CommentDTO> addComment(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody CreateCommentRequest request) {
         CommentDTO comment = issueService.addComment(id, request);
         return new ResponseEntity<>(comment, HttpStatus.CREATED);
@@ -193,7 +194,7 @@ public class IssueController {
         @ApiResponse(responseCode = "403", description = "No access to project"),
         @ApiResponse(responseCode = "404", description = "Issue not found")
     })
-    public ResponseEntity<List<CommentDTO>> getIssueComments(@PathVariable Long id) {
+    public ResponseEntity<List<CommentDTO>> getIssueComments(@PathVariable UUID id) {
         List<CommentDTO> comments = issueService.getIssueComments(id);
         return ResponseEntity.ok(comments);
     }
@@ -212,8 +213,50 @@ public class IssueController {
         @ApiResponse(responseCode = "403", description = "No access to project"),
         @ApiResponse(responseCode = "404", description = "Issue not found")
     })
-    public ResponseEntity<List<ActivityLogDTO>> getIssueActivity(@PathVariable Long id) {
+    public ResponseEntity<List<ActivityLogDTO>> getIssueActivity(@PathVariable UUID id) {
         List<ActivityLogDTO> activities = issueService.getIssueActivity(id);
         return ResponseEntity.ok(activities);
+    }
+
+    @PutMapping("/{id}/comments/{commentId}")
+    @Operation(
+        summary = "Update comment",
+        description = "Updates a comment. Only the comment author can edit their own comments."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Comment updated successfully",
+            content = @Content(schema = @Schema(implementation = CommentDTO.class))
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid input"),
+        @ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @ApiResponse(responseCode = "403", description = "You can only edit your own comments"),
+        @ApiResponse(responseCode = "404", description = "Comment not found")
+    })
+    public ResponseEntity<CommentDTO> updateComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            @Valid @RequestBody UpdateCommentRequest request) {
+        CommentDTO comment = issueService.updateComment(id, commentId, request);
+        return ResponseEntity.ok(comment);
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    @Operation(
+        summary = "Delete comment",
+        description = "Deletes a comment. Only the comment author can delete their own comments."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Comment deleted successfully"),
+        @ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @ApiResponse(responseCode = "403", description = "You can only delete your own comments"),
+        @ApiResponse(responseCode = "404", description = "Comment not found")
+    })
+    public ResponseEntity<Void> deleteComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId) {
+        issueService.deleteComment(id, commentId);
+        return ResponseEntity.noContent().build();
     }
 }

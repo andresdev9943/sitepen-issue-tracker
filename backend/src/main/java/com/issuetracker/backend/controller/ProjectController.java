@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -77,7 +78,7 @@ public class ProjectController {
         @ApiResponse(responseCode = "403", description = "No access to this project"),
         @ApiResponse(responseCode = "404", description = "Project not found")
     })
-    public ResponseEntity<ProjectDTO> getProjectById(@PathVariable Long id) {
+    public ResponseEntity<ProjectDTO> getProjectById(@PathVariable UUID id) {
         ProjectDTO project = projectService.getProjectById(id);
         return ResponseEntity.ok(project);
     }
@@ -99,7 +100,7 @@ public class ProjectController {
         @ApiResponse(responseCode = "404", description = "Project not found")
     })
     public ResponseEntity<ProjectDTO> updateProject(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateProjectRequest request) {
         ProjectDTO project = projectService.updateProject(id, request);
         return ResponseEntity.ok(project);
@@ -116,7 +117,7 @@ public class ProjectController {
         @ApiResponse(responseCode = "403", description = "Only owner can delete"),
         @ApiResponse(responseCode = "404", description = "Project not found")
     })
-    public ResponseEntity<Void> deleteProject(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteProject(@PathVariable UUID id) {
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();
     }
@@ -138,7 +139,7 @@ public class ProjectController {
         @ApiResponse(responseCode = "404", description = "Project or user not found")
     })
     public ResponseEntity<ProjectMemberDTO> addMember(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody AddMemberRequest request) {
         ProjectMemberDTO member = projectService.addMember(id, request);
         return new ResponseEntity<>(member, HttpStatus.CREATED);
@@ -156,8 +157,8 @@ public class ProjectController {
         @ApiResponse(responseCode = "404", description = "Project or member not found")
     })
     public ResponseEntity<Void> removeMember(
-            @PathVariable Long projectId,
-            @PathVariable Long userId) {
+            @PathVariable UUID projectId,
+            @PathVariable UUID userId) {
         projectService.removeMember(projectId, userId);
         return ResponseEntity.noContent().build();
     }
@@ -176,7 +177,7 @@ public class ProjectController {
         @ApiResponse(responseCode = "403", description = "No access to this project"),
         @ApiResponse(responseCode = "404", description = "Project not found")
     })
-    public ResponseEntity<List<ProjectMemberDTO>> getProjectMembers(@PathVariable Long id) {
+    public ResponseEntity<List<ProjectMemberDTO>> getProjectMembers(@PathVariable UUID id) {
         List<ProjectMemberDTO> members = projectService.getProjectMembers(id);
         return ResponseEntity.ok(members);
     }

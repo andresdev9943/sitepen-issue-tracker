@@ -48,7 +48,7 @@ export class ProjectDetailComponent implements OnInit {
     
     const id = this.route.snapshot.params['id'];
     if (id) {
-      this.loadProject(+id);
+      this.loadProject(id);  // Now a string (UUID)
     }
 
     // Load current user if needed
@@ -57,7 +57,7 @@ export class ProjectDetailComponent implements OnInit {
     }
   }
 
-  loadProject(id: number): void {
+  loadProject(id: string): void {  // UUID
     this.loading = true;
     this.error = '';
 

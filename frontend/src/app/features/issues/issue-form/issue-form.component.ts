@@ -23,7 +23,7 @@ export class IssueFormComponent implements OnInit {
   loading = false;
   error = '';
   isEditMode = false;
-  issueId?: number;
+  issueId?: string;  // UUID
   currentIssue?: Issue;  // Store current issue for getting reporter
   currentUser$!: Observable<User | null>;  // Initialize in ngOnInit
 
@@ -66,14 +66,16 @@ export class IssueFormComponent implements OnInit {
     const id = this.route.snapshot.params['id'];
     if (id) {
       this.isEditMode = true;
-      this.issueId = +id;
-      this.loadIssue(this.issueId);
+      this.issueId = id;  // Now a string (UUID)
+      if (this.issueId) {  // Type guard for strict null check
+        this.loadIssue(this.issueId);
+      }
     } else {
       // Check for projectId query param
       this.route.queryParams.subscribe(params => {
         if (params['projectId']) {
-          this.issueForm.patchValue({ projectId: +params['projectId'] });
-          this.loadMembers(+params['projectId']);
+          this.issueForm.patchValue({ projectId: params['projectId'] });  // Already a string
+          this.loadMembers(params['projectId']);
         }
       });
     }
@@ -81,7 +83,7 @@ export class IssueFormComponent implements OnInit {
     // Watch project changes to load members
     this.issueForm.get('projectId')?.valueChanges.subscribe(projectId => {
       if (projectId) {
-        this.loadMembers(+projectId);
+        this.loadMembers(projectId);  // Already a string (UUID)
       } else {
         this.members = [];
       }
@@ -108,7 +110,7 @@ export class IssueFormComponent implements OnInit {
     });
   }
 
-  loadMembers(projectId: number): void {
+  loadMembers(projectId: string): void {  // UUID
     this.loadingMembers = true;
     
     // Load both project (for owner) and members
@@ -119,7 +121,7 @@ export class IssueFormComponent implements OnInit {
             this.members = members;
             
             // Build combined list of available assignees
-            const assigneeMap = new Map<number, User>();
+            const assigneeMap = new Map<string, User>();  // UUID keys
             
             // Add project owner
             assigneeMap.set(project.owner.id, project.owner);
@@ -153,7 +155,7 @@ export class IssueFormComponent implements OnInit {
     });
   }
 
-  loadIssue(id: number): void {
+  loadIssue(id: string): void {  // UUID
     this.loading = true;
     this.issueService.getIssue(id).subscribe({
       next: (issue) => {
@@ -189,10 +191,10 @@ export class IssueFormComponent implements OnInit {
     const request = {
       title: formValue.title,
       description: formValue.description || undefined,
-      projectId: +formValue.projectId,
+      projectId: formValue.projectId,  // Already a string (UUID)
       status: formValue.status,
       priority: formValue.priority,
-      assigneeId: formValue.assigneeId ? +formValue.assigneeId : undefined
+      assigneeId: formValue.assigneeId || undefined  // Already a string (UUID)
     };
 
     const operation = this.isEditMode && this.issueId

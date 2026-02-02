@@ -2,8 +2,8 @@ import { User } from './user.model';
 import { IssueStatus, IssuePriority } from './enums';
 
 export interface Issue {
-  id: number;
-  projectId: number;
+  id: string;  // UUID
+  projectId: string;  // UUID
   projectName: string;
   title: string;
   description: string;
@@ -11,18 +11,18 @@ export interface Issue {
   priority: IssuePriority;
   assignee: User | null;
   reporter: User;  // Changed from createdBy to reporter
-  projectOwnerId: number;  // Added for permission checks
+  projectOwnerId: string;  // UUID - Added for permission checks
   createdAt: string;
   updatedAt: string;
   commentCount: number;
 }
 
 export interface CreateIssueRequest {
-  projectId: number;
+  projectId: string;  // UUID
   title: string;
   description: string;
   priority?: IssuePriority;
-  assigneeId?: number;
+  assigneeId?: string;  // UUID
 }
 
 export interface UpdateIssueRequest {
@@ -30,12 +30,12 @@ export interface UpdateIssueRequest {
   description?: string;
   status?: IssueStatus;
   priority?: IssuePriority;
-  assigneeId?: number;
+  assigneeId?: string;  // UUID
 }
 
 export interface Comment {
-  id: number;
-  issueId: number;
+  id: string;  // UUID
+  issueId: string;  // UUID
   user: User;  // Backend sends 'user', not 'author'
   content: string;
   createdAt: string;
@@ -49,8 +49,8 @@ export interface CreateCommentRequest {
 }
 
 export interface ActivityLog {
-  id: number;
-  issueId: number;
+  id: string;  // UUID
+  issueId: string;  // UUID
   user: User;
   action: string;
   changes: string;  // Changed from details to changes to match backend

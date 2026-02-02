@@ -6,6 +6,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -13,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SseService {
 
     // Store emitters by project ID
-    private final Map<Long, CopyOnWriteArrayList<SseEmitter>> projectEmitters = new ConcurrentHashMap<>();
+    private final Map<UUID, CopyOnWriteArrayList<SseEmitter>> projectEmitters = new ConcurrentHashMap<>();
 
     // Store emitters for all issues (not filtered by project)
     private final CopyOnWriteArrayList<SseEmitter> globalEmitters = new CopyOnWriteArrayList<>();
@@ -21,7 +22,7 @@ public class SseService {
     /**
      * Create a new SSE emitter for a specific project
      */
-    public SseEmitter createEmitter(Long projectId) {
+    public SseEmitter createEmitter(UUID projectId) {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE); // No timeout
         
         if (projectId != null) {
@@ -54,7 +55,7 @@ public class SseService {
      * Broadcast issue update to all subscribers of a project
      */
     public void broadcastIssueUpdate(IssueDTO issue, String eventType) {
-        Long projectId = issue.getProjectId();
+        UUID projectId = issue.getProjectId();
         
         // Send to project-specific subscribers
         CopyOnWriteArrayList<SseEmitter> emitters = projectEmitters.get(projectId);
@@ -85,7 +86,7 @@ public class SseService {
     /**
      * Remove an emitter from a project's subscriber list
      */
-    private void removeEmitter(Long projectId, SseEmitter emitter) {
+    private void removeEmitter(UUID projectId, SseEmitter emitter) {
         if (projectId != null) {
             CopyOnWriteArrayList<SseEmitter> emitters = projectEmitters.get(projectId);
             if (emitters != null) {
@@ -111,7 +112,7 @@ public class SseService {
     /**
      * Get the number of active connections for a specific project
      */
-    public int getProjectConnectionCount(Long projectId) {
+    public int getProjectConnectionCount(UUID projectId) {
         CopyOnWriteArrayList<SseEmitter> emitters = projectEmitters.get(projectId);
         return emitters != null ? emitters.size() : 0;
     }

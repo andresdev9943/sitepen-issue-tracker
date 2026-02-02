@@ -26,6 +26,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/sse")
@@ -64,7 +65,7 @@ public class SseController {
     })
     public SseEmitter subscribeToIssues(
             @Parameter(description = "Project ID to filter updates (optional, null for all projects user has access to)")
-            @RequestParam(required = false) Long projectId) {
+            @RequestParam(required = false) UUID projectId) {
         
         // Validate project access if projectId is specified
         if (projectId != null) {
@@ -91,7 +92,7 @@ public class SseController {
     })
     public ResponseEntity<Map<String, Object>> getStats(
             @Parameter(description = "Project ID to get stats for (optional)")
-            @RequestParam(required = false) Long projectId) {
+            @RequestParam(required = false) UUID projectId) {
         
         Map<String, Object> stats = new HashMap<>();
         

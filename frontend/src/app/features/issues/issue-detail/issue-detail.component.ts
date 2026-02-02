@@ -43,13 +43,13 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
   showAssigneeDropdown = false;
 
   // Comment editing
-  editingCommentId: number | null = null;
+  editingCommentId: string | null = null;  // UUID
   editCommentControl = new FormControl('', Validators.required);
   updatingComment = false;
 
   showDeleteConfirm = false;
   deleting = false;
-  deletingCommentId: number | null = null;
+  deletingCommentId: string | null = null;  // UUID
 
   // Enums for template
   IssueStatus = IssueStatus;
@@ -71,9 +71,9 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     
     const id = this.route.snapshot.params['id'];
     if (id) {
-      this.loadIssue(+id);
-      this.loadComments(+id);
-      this.loadActivityLog(+id);
+      this.loadIssue(id);  // Now a string (UUID)
+      this.loadComments(id);
+      this.loadActivityLog(id);
     }
 
     // Load current user if needed
@@ -87,7 +87,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadIssue(id: number): void {
+  loadIssue(id: string): void {  // UUID
     this.loading = true;
     this.error = '';
 
@@ -106,7 +106,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadComments(issueId: number): void {
+  loadComments(issueId: string): void {  // UUID
     this.loadingComments = true;
     this.issueService.getComments(issueId).subscribe({
       next: (comments) => {
@@ -120,7 +120,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadActivityLog(issueId: number): void {
+  loadActivityLog(issueId: string): void {  // UUID
     this.loadingActivity = true;
     this.issueService.getActivityLog(issueId).subscribe({
       next: (activity) => {
@@ -250,7 +250,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadProjectMembers(projectId: number): void {
+  loadProjectMembers(projectId: string): void {  // UUID
     this.loadingMembers = true;
     
     // Load both project (for owner) and members
@@ -261,7 +261,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
             this.projectMembers = members;
             
             // Build combined list of available assignees
-            const assigneeMap = new Map<number, User>();
+            const assigneeMap = new Map<string, User>();  // UUID keys
             
             // Add project owner
             assigneeMap.set(project.owner.id, project.owner);
@@ -308,7 +308,7 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     this.showAssigneeDropdown = !this.showAssigneeDropdown;
   }
 
-  updateAssignee(assigneeId: number | null): void {
+  updateAssignee(assigneeId: string | null): void {  // UUID
     if (!this.issue) return;
 
     this.updatingAssignee = true;
@@ -347,15 +347,32 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     if (this.editCommentControl.invalid || !this.issue) return;
 
     this.updatingComment = true;
-    // Note: Backend needs to support PATCH /api/issues/{id}/comments/{commentId}
-    // For now, we'll reload after the API is implemented
-    console.warn('Comment editing API not yet implemented on backend');
-    this.updatingComment = false;
-    this.editingCommentId = null;
-    // TODO: Implement when backend supports comment editing
+    this.issueService.updateComment(
+      this.issue.id,
+      comment.id,
+      this.editCommentControl.value!
+    ).subscribe({
+      next: (updatedComment) => {
+        // Update the comment in the local array
+        const index = this.comments.findIndex(c => c.id === comment.id);
+        if (index !== -1) {
+          this.comments[index] = updatedComment;
+        }
+        this.editingCommentId = null;
+        this.editCommentControl.reset();
+        this.updatingComment = false;
+        // Reload activity to show edit event
+        this.loadActivityLog(this.issue!.id);
+      },
+      error: (error) => {
+        console.error('Error updating comment:', error);
+        alert('Failed to update comment: ' + (error.error?.message || 'Unknown error'));
+        this.updatingComment = false;
+      }
+    });
   }
 
-  confirmDeleteComment(commentId: number): void {
+  confirmDeleteComment(commentId: string): void {  // UUID
     this.deletingCommentId = commentId;
   }
 
@@ -363,14 +380,23 @@ export class IssueDetailComponent implements OnInit, OnDestroy {
     this.deletingCommentId = null;
   }
 
-  deleteComment(commentId: number): void {
+  deleteComment(commentId: string): void {  // UUID
     if (!this.issue) return;
 
-    // Note: Backend needs to support DELETE /api/issues/{id}/comments/{commentId}
-    // For now, we'll just log
-    console.warn('Comment deletion API not yet implemented on backend');
-    this.deletingCommentId = null;
-    // TODO: Implement when backend supports comment deletion
+    this.issueService.deleteComment(this.issue.id, commentId).subscribe({
+      next: () => {
+        // Remove the comment from local array
+        this.comments = this.comments.filter(c => c.id !== commentId);
+        this.deletingCommentId = null;
+        // Reload activity to show delete event
+        this.loadActivityLog(this.issue!.id);
+      },
+      error: (error) => {
+        console.error('Error deleting comment:', error);
+        alert('Failed to delete comment: ' + (error.error?.message || 'Unknown error'));
+        this.deletingCommentId = null;
+      }
+    });
   }
 
   logout(): void {

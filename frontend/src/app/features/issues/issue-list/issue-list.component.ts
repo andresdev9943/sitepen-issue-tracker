@@ -41,7 +41,7 @@ export class IssueListComponent implements OnInit, OnDestroy {
   totalElements = 0;
 
   // Filters
-  selectedProjectId?: number;
+  selectedProjectId?: string;  // UUID
   selectedStatus?: IssueStatus;
   selectedPriority?: IssuePriority;
   searchControl = new FormControl('');
@@ -72,7 +72,7 @@ export class IssueListComponent implements OnInit, OnDestroy {
     // Check for projectId query param
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
       if (params['projectId']) {
-        this.selectedProjectId = +params['projectId'];
+        this.selectedProjectId = params['projectId'];  // Already a string (UUID)
       }
       this.loadIssues();
     });
@@ -195,7 +195,7 @@ export class IssueListComponent implements OnInit, OnDestroy {
 
   onProjectFilterChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
-    this.selectedProjectId = select.value ? +select.value : undefined;
+    this.selectedProjectId = select.value || undefined;  // Already a string (UUID)
     this.currentPage = 0;
     this.loadIssues();
   }

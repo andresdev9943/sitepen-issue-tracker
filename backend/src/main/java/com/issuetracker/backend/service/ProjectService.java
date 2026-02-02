@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,14 +52,14 @@ public class ProjectService {
         return projects.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
-    public ProjectDTO getProjectById(Long id) {
+    public ProjectDTO getProjectById(UUID id) {
         Project project = findProjectById(id);
         checkUserHasAccess(project);
         return convertToDTO(project);
     }
 
     @Transactional
-    public ProjectDTO updateProject(Long id, UpdateProjectRequest request) {
+    public ProjectDTO updateProject(UUID id, UpdateProjectRequest request) {
         Project project = findProjectById(id);
         checkUserIsOwner(project);
 
@@ -75,14 +76,14 @@ public class ProjectService {
     }
 
     @Transactional
-    public void deleteProject(Long id) {
+    public void deleteProject(UUID id) {
         Project project = findProjectById(id);
         checkUserIsOwner(project);
         projectRepository.delete(project);
     }
 
     @Transactional
-    public ProjectMemberDTO addMember(Long projectId, AddMemberRequest request) {
+    public ProjectMemberDTO addMember(UUID projectId, AddMemberRequest request) {
         Project project = findProjectById(projectId);
         checkUserIsOwner(project);
 
@@ -109,7 +110,7 @@ public class ProjectService {
     }
 
     @Transactional
-    public void removeMember(Long projectId, Long userId) {
+    public void removeMember(UUID projectId, UUID userId) {
         Project project = findProjectById(projectId);
         checkUserIsOwner(project);
 
@@ -120,7 +121,7 @@ public class ProjectService {
         projectMemberRepository.deleteByProjectIdAndUserId(projectId, userId);
     }
 
-    public List<ProjectMemberDTO> getProjectMembers(Long projectId) {
+    public List<ProjectMemberDTO> getProjectMembers(UUID projectId) {
         Project project = findProjectById(projectId);
         checkUserHasAccess(project);
 
@@ -130,7 +131,7 @@ public class ProjectService {
 
     // Helper methods
 
-    private Project findProjectById(Long id) {
+    private Project findProjectById(UUID id) {
         return projectRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
     }

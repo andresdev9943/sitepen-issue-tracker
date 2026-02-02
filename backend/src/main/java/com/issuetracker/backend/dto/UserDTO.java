@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -13,8 +14,8 @@ import java.time.LocalDateTime;
 @Schema(description = "User information")
 public class UserDTO {
 
-    @Schema(description = "User ID", example = "1")
-    private Long id;
+    @Schema(description = "User ID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID id;
 
     @Schema(description = "User email", example = "user@example.com")
     private String email;

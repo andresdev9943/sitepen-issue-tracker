@@ -3,7 +3,7 @@ import { User } from './user.model';
 export interface AuthResponse {
   token: string;
   type: string;
-  userId: number;
+  userId: string;  // UUID
   email: string;
   fullName: string;
 }

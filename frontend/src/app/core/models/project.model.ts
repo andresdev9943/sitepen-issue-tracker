@@ -2,14 +2,14 @@ import { User } from './user.model';
 import { ProjectRole } from './enums';
 
 export interface ProjectMember {
-  id: number;
+  id: string;  // UUID
   user: User;
   role: ProjectRole;
   joinedAt: string;
 }
 
 export interface Project {
-  id: number;
+  id: string;  // UUID
   name: string;
   description: string;
   owner: User;

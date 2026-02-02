@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -87,10 +88,10 @@ public class IssueService {
     }
 
     public Page<IssueDTO> getIssues(
-            Long projectId,
+            UUID projectId,
             IssueStatus status,
             IssuePriority priority,
-            Long assigneeId,
+            UUID assigneeId,
             String search,
             int page,
             int size,
@@ -133,14 +134,14 @@ public class IssueService {
         return issues.map(this::convertToDTO);
     }
 
-    public IssueDTO getIssueById(Long id) {
+    public IssueDTO getIssueById(UUID id) {
         Issue issue = findIssueById(id);
         checkUserHasProjectAccess(issue.getProject());
         return convertToDTO(issue);
     }
 
     @Transactional
-    public IssueDTO updateIssue(Long id, UpdateIssueRequest request) {
+    public IssueDTO updateIssue(UUID id, UpdateIssueRequest request) {
         Issue issue = findIssueById(id);
         checkUserHasProjectAccess(issue.getProject());
         
@@ -210,7 +211,7 @@ public class IssueService {
     }
 
     @Transactional
-    public void deleteIssue(Long id) {
+    public void deleteIssue(UUID id) {
         Issue issue = findIssueById(id);
         Project project = issue.getProject();
         
@@ -221,7 +222,7 @@ public class IssueService {
     }
 
     @Transactional
-    public CommentDTO addComment(Long issueId, CreateCommentRequest request) {
+    public CommentDTO addComment(UUID issueId, CreateCommentRequest request) {
         Issue issue = findIssueById(issueId);
         checkUserHasProjectAccess(issue.getProject());
         
@@ -247,7 +248,7 @@ public class IssueService {
         return convertCommentToDTO(savedComment);
     }
 
-    public List<CommentDTO> getIssueComments(Long issueId) {
+    public List<CommentDTO> getIssueComments(UUID issueId) {
         Issue issue = findIssueById(issueId);
         checkUserHasProjectAccess(issue.getProject());
 
@@ -255,7 +256,7 @@ public class IssueService {
         return comments.stream().map(this::convertCommentToDTO).collect(Collectors.toList());
     }
 
-    public List<ActivityLogDTO> getIssueActivity(Long issueId) {
+    public List<ActivityLogDTO> getIssueActivity(UUID issueId) {
         Issue issue = findIssueById(issueId);
         checkUserHasProjectAccess(issue.getProject());
 
@@ -263,9 +264,73 @@ public class IssueService {
         return activities.stream().map(this::convertActivityToDTO).collect(Collectors.toList());
     }
 
+    @Transactional
+    public CommentDTO updateComment(UUID issueId, UUID commentId, UpdateCommentRequest request) {
+        Issue issue = findIssueById(issueId);
+        checkUserHasProjectAccess(issue.getProject());
+        
+        Comment comment = commentRepository.findById(commentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
+        
+        // Verify comment belongs to the issue
+        if (!comment.getIssue().getId().equals(issueId)) {
+            throw new ForbiddenException("Comment does not belong to this issue");
+        }
+        
+        // Only comment author can update
+        User currentUser = getCurrentUser();
+        if (!comment.getUser().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You can only edit your own comments");
+        }
+        
+        String oldContent = comment.getContent();
+        comment.setContent(request.getContent());
+        Comment updatedComment = commentRepository.save(comment);
+        
+        // Log activity
+        logActivity(issue, currentUser, "Comment edited", 
+            "Comment edited (ID: " + commentId + ")");
+        
+        // Broadcast SSE event
+        IssueDTO issueDTO = convertToDTO(issue);
+        sseService.broadcastIssueUpdate(issueDTO, "comment-updated");
+        
+        return convertCommentToDTO(updatedComment);
+    }
+
+    @Transactional
+    public void deleteComment(UUID issueId, UUID commentId) {
+        Issue issue = findIssueById(issueId);
+        checkUserHasProjectAccess(issue.getProject());
+        
+        Comment comment = commentRepository.findById(commentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
+        
+        // Verify comment belongs to the issue
+        if (!comment.getIssue().getId().equals(issueId)) {
+            throw new ForbiddenException("Comment does not belong to this issue");
+        }
+        
+        // Only comment author can delete
+        User currentUser = getCurrentUser();
+        if (!comment.getUser().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You can only delete your own comments");
+        }
+        
+        commentRepository.delete(comment);
+        
+        // Log activity
+        logActivity(issue, currentUser, "Comment deleted", 
+            "Comment deleted (ID: " + commentId + ")");
+        
+        // Broadcast SSE event
+        IssueDTO issueDTO = convertToDTO(issue);
+        sseService.broadcastIssueUpdate(issueDTO, "comment-deleted");
+    }
+
     // Helper methods
 
-    private Issue findIssueById(Long id) {
+    private Issue findIssueById(UUID id) {
         return issueRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", id));
     }
@@ -282,7 +347,7 @@ public class IssueService {
         checkUserHasProjectAccessById(project, currentUser.getId());
     }
 
-    private void checkUserHasProjectAccessById(Project project, Long userId) {
+    private void checkUserHasProjectAccessById(Project project, UUID userId) {
         // Owner always has access
         if (project.getOwner().getId().equals(userId)) {
             return;

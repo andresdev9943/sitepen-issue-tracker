@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,6 +27,6 @@ public class UpdateIssueRequest {
     @Schema(description = "Issue priority", example = "HIGH")
     private IssuePriority priority;
 
-    @Schema(description = "Assignee user ID (null to unassign)", example = "2")
-    private Long assigneeId;
+    @Schema(description = "Assignee user ID (null to unassign)", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID assigneeId;
 }
