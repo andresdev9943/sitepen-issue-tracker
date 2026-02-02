@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: issue-tracker-postgres
+    environment:
+      POSTGRES_DB: issue_tracker
+      POSTGRES_USER: vostro
+      POSTGRES_PASSWORD: devpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - issue-tracker-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vostro -d issue_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: issue-tracker-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/issue_tracker
+      SPRING_DATASOURCE_USERNAME: vostro
+      SPRING_DATASOURCE_PASSWORD: devpassword
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - issue-tracker-network
+    volumes:
+      # Mount source code for hot reload during development
+      - ./backend/src:/app/src
+    restart: unless-stopped
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: issue-tracker-frontend
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+    networks:
+      - issue-tracker-network
+    volumes:
+      # Mount source code for hot reload during development
+      - ./frontend/src:/app/src
+      - ./frontend/angular.json:/app/angular.json
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
+      # Avoid mounting node_modules
+      - /app/node_modules
+    restart: unless-stopped
+
+networks:
+  issue-tracker-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

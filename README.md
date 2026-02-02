@@ -2,6 +2,16 @@
 
 A full-stack issue tracking application with Angular frontend and Spring Boot backend.
 
+## 🚀 Quick Start
+
+**Want to start immediately?** See [QUICK_START.md](QUICK_START.md) for a fast setup guide!
+
+```bash
+docker-compose up --build
+# Then visit http://localhost:4200
+# Login: admin1@issue-tracker.com / password123
+```
+
 ## Project Structure
 
 ```
@@ -54,6 +64,59 @@ cd backend
 The Spring Boot API will be available at `http://localhost:8080`
 
 For detailed backend documentation, see [backend/README.md](backend/README.md)
+
+## Docker Setup (Recommended for Development)
+
+The easiest way to run the entire stack (PostgreSQL + Backend + Frontend) is using Docker Compose.
+
+### Prerequisites
+- Docker (version 20.10+)
+- Docker Compose (version 2.0+)
+
+### Quick Start with Docker
+
+```bash
+# Build and start all services
+docker-compose up --build
+
+# Or use the Makefile
+make up
+```
+
+This will start:
+- **PostgreSQL** database on port 5432
+- **Backend** API on port 8080
+- **Frontend** app on port 4200
+
+**Test User Credentials:**
+- Email: `admin1@issue-tracker.com` / Password: `password123`
+- Email: `admin2@issue-tracker.com` / Password: `password123`
+
+The database is automatically seeded with sample projects, issues, and comments. See [SEED_DATA.md](SEED_DATA.md) for complete details.
+
+### Docker Commands
+
+```bash
+# Start services
+make up              # Start all services (foreground)
+make up-d            # Start all services (background)
+
+# View logs
+make logs            # All services
+make logs-backend    # Backend only
+make logs-frontend   # Frontend only
+
+# Stop services
+make down            # Stop all services
+
+# Database access
+make db-connect      # Connect to PostgreSQL
+
+# Clean up (⚠️ deletes data)
+make clean           # Remove all containers and volumes
+```
+
+For detailed Docker documentation, see [DOCKER_SETUP.md](DOCKER_SETUP.md)
 
 ## Quick Commands
 
@@ -136,14 +199,16 @@ Once both applications are running:
 The backend is pre-configured to allow CORS requests from `http://localhost:4200` (Angular dev server).
 
 ### Database
-- **Development:** H2 in-memory database
+- **Docker (Recommended):** PostgreSQL in Docker container
+- **Local Development:** PostgreSQL on localhost or H2 in-memory database
 - **Production:** Configure in `backend/src/main/resources/application-prod.properties`
 
 ### Profiles
 
 Backend supports multiple profiles:
 - **Default:** Basic configuration
-- **Dev:** Development settings (`application-dev.properties`)
+- **Dev:** Development settings with local PostgreSQL (`application-dev.properties`)
+- **Docker:** Docker environment with containerized PostgreSQL (`application-docker.properties`)
 - **Prod:** Production settings (`application-prod.properties`)
 
 Run with profile:
